@@ -16,13 +16,13 @@
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 201 96% 23%; /* Deep Blue from top of screenshot */
+    --primary: 346 84% 49%; /* Deriv Red */
     --primary-foreground: 210 20% 98%;
     --secondary: 210 20% 94%;
     --secondary-foreground: 222 47% 11%;
     --muted: 210 20% 94%;
     --muted-foreground: 215 16% 47%;
-    --accent: 201 96% 32%;
+    --accent: 201 96% 23%; /* Deep Blue from top of screenshot */
     --accent-foreground: 210 20% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
@@ -30,7 +30,7 @@
     --warning: 38 92% 50%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 201 96% 23%;
+    --ring: 346 84% 49%;
     --radius: 1.5rem; /* More rounded as per screenshot */
     --sidebar-background: 201 96% 23%; /* Deep blue sidebar */
     --sidebar-foreground: 210 20% 98%;
@@ -50,14 +50,19 @@
   body {
     @apply bg-background text-foreground font-inter antialiased;
     /* Split background as seen in screenshot: Deep Blue Top, Off-White Bottom */
-    background: linear-gradient(to bottom, hsl(201, 96%, 23%) 0%, hsl(201, 96%, 23%) 45%, hsl(210, 20%, 98%) 45%, hsl(210, 20%, 98%) 100%);
+    background: linear-gradient(to bottom, hsl(201, 96% , 23%) 0%, hsl(201, 96% , 23%) 400px, hsl(210, 20%, 98%) 400px, hsl(210, 20%, 98%) 100%);
     background-attachment: fixed;
   }
 }
 
 @layer utilities {
   .glass-card {
-    @apply bg-white/95 backdrop-blur-md border border-black/5 shadow-sm rounded-[1.5rem];
+    @apply bg-white/95 backdrop-blur-md border border-black/5 shadow-md rounded-[1.5rem] transition-all duration-300;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+  }
+  .glass-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 8px 20px -4px rgba(0, 0, 0, 0.1);
   }
   .neon-glow-primary {
     box-shadow: 0 4px 20px hsla(357, 95%, 62%, 0.1);

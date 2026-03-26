@@ -7,13 +7,14 @@ import { Link } from "react-router-dom";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import RecentTradesTable from "../components/dashboard/RecentTradesTable";
 
+const accentMap = {
+  up:      { icon: "bg-success/10 border-success/20",  text: "text-success",     iconColor: "text-success" },
+  down:    { icon: "bg-primary/10 border-primary/20",  text: "text-primary",     iconColor: "text-primary" },
+  neutral: { icon: "bg-accent/10 border-accent/20",    text: "text-accent",      iconColor: "text-accent" },
+  info:    { icon: "bg-slate-100 border-slate-200",    text: "text-slate-900",   iconColor: "text-slate-500" },
+};
+
 function StatCard({ title, value, icon: Icon, trend, trendUp, accent = "neutral", delay = 0 }) {
-  const accentMap = {
-    up:      { icon: "bg-success/10 border-success/20",  text: "text-success",     iconColor: "text-success" },
-    down:    { icon: "bg-primary/10 border-primary/20",  text: "text-primary",     iconColor: "text-primary" },
-    neutral: { icon: "bg-accent/10 border-accent/20",    text: "text-accent",      iconColor: "text-accent" },
-    info:    { icon: "bg-slate-100 border-slate-200",    text: "text-slate-900",   iconColor: "text-slate-500" },
-  };
   const s = accentMap[accent] || accentMap.neutral;
 
   return (
@@ -28,7 +29,7 @@ function StatCard({ title, value, icon: Icon, trend, trendUp, accent = "neutral"
       }`} />
       
       <div className="flex items-start justify-between mb-5">
-        <div className={`h-11 w-11 rounded-xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 shadow-sm ${s.icon}`}>
+        <div className={`h-11 w-11 rounded-2xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 shadow-md ${s.icon}`}>
           <Icon className={`h-5 w-5 ${s.iconColor}`} />
         </div>
         {trend !== undefined && (
@@ -40,7 +41,7 @@ function StatCard({ title, value, icon: Icon, trend, trendUp, accent = "neutral"
         )}
       </div>
       <div className="space-y-1">
-        <p className="text-3xl font-black font-mono text-foreground tracking-tighter">{value}</p>
+        <p className="text-2xl font-black font-mono text-foreground tracking-tighter">{value}</p>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{title}</p>
       </div>
     </motion.div>
@@ -92,11 +93,11 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard title="Total P&L" value={`${isProfit ? "+" : ""}$${stats.totalProfit.toFixed(2)}`}
-          icon={DollarSign} accent={isProfit ? "up" : "down"} trendUp={isProfit} delay={0} />
-        <StatCard title="Active Bots" value={`${stats.activeBots} / ${bots.length}`} icon={Bot} accent="info" delay={0.05} />
-        <StatCard title="Total Trades" value={stats.totalTrades} icon={Activity} accent="neutral" delay={0.1} />
+          icon={DollarSign} accent={isProfit ? "up" : "down"} trendUp={isProfit} trend={0} delay={0} />
+        <StatCard title="Active Bots" value={`${stats.activeBots} / ${bots.length}`} icon={Bot} accent="info" trend={0} trendUp={false} delay={0.05} />
+        <StatCard title="Total Trades" value={String(stats.totalTrades)} icon={Activity} accent="neutral" trend={0} trendUp={false} delay={0.1} />
         <StatCard title="Win Rate" value={`${stats.avgWinRate.toFixed(1)}%`} icon={TrendingUp}
-          accent={stats.avgWinRate >= 50 ? "up" : "down"} trendUp={stats.avgWinRate >= 50} delay={0.15} />
+          accent={stats.avgWinRate >= 50 ? "up" : "down"} trendUp={stats.avgWinRate >= 50} trend={0} delay={0.15} />
       </div>
 
       {/* Chart + Active Bots */}
@@ -111,8 +112,8 @@ export default function Dashboard() {
                 <AreaChart data={profitCurve} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                   <defs>
                     <linearGradient id="pGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(357,95%,62%)" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="hsl(357,95%,62%)" stopOpacity={0} />
+                      <stop offset="0%" stopColor="hsl(346, 84%, 49%)" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="hsl(346, 84%, 49%)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="i" hide />
