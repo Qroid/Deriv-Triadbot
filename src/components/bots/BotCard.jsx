@@ -15,17 +15,10 @@ const STRATEGY_INFO = {
   "Reverse Martingale": { desc: "Double stake after each win", tag: "Aggressive" },
 };
 
-const CONTRACT_INFO = {
-  "Rise/Fall":      "Predict if next tick is higher or lower than entry",
-  "Even/Odd":       "Predict if last digit will be even or odd",
-  "Matches/Differs":"Predict if last digit matches or differs from barrier",
-  "Over/Under":     "Predict if last digit will be over or under barrier",
-  "Higher/Lower":   "Predict if exit price is higher or lower than entry",
-};
-
 export default function BotCard({ bot, onEdit, index = 0 }) {
   const queryClient = useQueryClient();
 
+  /** @param {string} newStatus */
   const handleStatus = async (newStatus) => {
     await appStorage.TradingBot.update(bot.id, { status: newStatus });
     queryClient.invalidateQueries({ queryKey: ["tradingBots"] });
@@ -34,48 +27,55 @@ export default function BotCard({ bot, onEdit, index = 0 }) {
   const isActive = bot.status === "active";
   const isPaused = bot.status === "paused";
   const stratInfo = STRATEGY_INFO[bot.strategy] || {};
-  const contractInfo = CONTRACT_INFO[bot.contract_type] || "";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      className={`rounded-2xl border bg-card overflow-hidden transition-all duration-200 ${
-        isActive ? "border-success/30" : "border-border/60"
+      className={`rounded-2xl border backdrop-blur-xl transition-all duration-500 group shadow-sm hover:shadow-md ${
+        isActive ? "border-success/40 bg-success/[0.02]" : "border-black/[0.08] bg-white/60 hover:border-black/[0.12]"
       }`}
     >
       {/* Status bar */}
-      <div className={`h-0.5 w-full ${
-        isActive ? "bg-success" : isPaused ? "bg-warning" : "bg-border"
+      <div className={`h-[2px] w-full transition-all duration-500 ${
+        isActive ? "bg-success" : 
+        isPaused ? "bg-warning" : 
+        "bg-black/[0.05]"
       }`} />
 
       <div className="p-5 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className={`h-2 w-2 rounded-full shrink-0 ${
-                isActive ? "bg-success animate-pulse-dot" : isPaused ? "bg-warning" : "bg-muted-foreground/30"
-              }`} />
-              <h3 className="font-bold text-foreground text-sm">{bot.name}</h3>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <div className={`h-2.5 w-2.5 rounded-full ${
+                  isActive ? "bg-success shadow-[0_0_8px_hsl(142,71%,45%)]" : 
+                  isPaused ? "bg-warning" : "bg-slate-300"
+                }`} />
+                {isActive && <div className="absolute inset-0 h-2.5 w-2.5 rounded-full bg-success animate-ping opacity-75" />}
+              </div>
+              <h3 className="font-bold text-foreground/90 text-sm tracking-tight">{bot.name}</h3>
             </div>
-            <p className="text-[11px] text-muted-foreground">{bot.asset}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{bot.asset}</p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(bot)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-black/[0.03] border border-black/[0.05] text-slate-400 hover:text-foreground transition-all duration-300" onClick={() => onEdit(bot)}>
             <Settings className="h-3.5 w-3.5" />
           </Button>
         </div>
 
         {/* Strategy info — vivid */}
-        <div className="rounded-xl bg-secondary/50 border border-border/40 p-3 space-y-2">
+        <div className="rounded-xl bg-black/[0.02] border border-black/[0.05] p-4 space-y-3 transition-colors duration-300 group-hover:border-black/[0.08]">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold mb-0.5">Strategy</p>
-              <p className="text-sm font-bold text-foreground">{bot.strategy}</p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 font-black mb-1">Strategy</p>
+              <p className="text-sm font-black text-foreground tracking-tight">{bot.strategy}</p>
             </div>
             {stratInfo.tag && (
-              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${
                 stratInfo.tag === "High Risk" || stratInfo.tag === "Aggressive"
                   ? "bg-primary/10 text-primary border-primary/20"
                   : stratInfo.tag === "Safe" || stratInfo.tag === "Conservative"
@@ -86,60 +86,73 @@ export default function BotCard({ bot, onEdit, index = 0 }) {
               </span>
             )}
           </div>
-          {stratInfo.desc && <p className="text-[10px] text-muted-foreground/70 leading-relaxed">{stratInfo.desc}</p>}
-
-          <div className="pt-1 border-t border-border/30">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold mb-0.5">Contract</p>
-            <p className="text-xs font-semibold text-foreground">{bot.contract_type}
-              {bot.prediction && <span className="text-muted-foreground font-normal"> · {bot.prediction}</span>}
-            </p>
-            {contractInfo && <p className="text-[10px] text-muted-foreground/60 mt-0.5 leading-relaxed">{contractInfo}</p>}
+          
+          <div className="pt-3 border-t border-black/[0.03]">
+            <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400 font-black mb-1">Contract</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-600">{bot.contract_type}</p>
+              {bot.prediction && (
+                <span className="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 rounded bg-white border border-black/[0.05] shadow-sm">
+                  {bot.prediction}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="text-[10px] text-muted-foreground/60 font-medium">Stake</p>
-            <p className="text-sm font-black font-mono text-foreground">${bot.initial_stake?.toFixed(2)}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-black">Stake</p>
+            <p className="text-sm font-black font-mono text-foreground tracking-tighter">${bot.initial_stake?.toFixed(2)}</p>
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground/60 font-medium">P&L</p>
-            <p className={`text-sm font-black font-mono ${(bot.total_profit || 0) >= 0 ? "text-success" : "text-primary"}`}>
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-black">P&L</p>
+            <p className={`text-sm font-black font-mono tracking-tighter ${(bot.total_profit || 0) >= 0 ? "text-success" : "text-primary"}`}>
               {(bot.total_profit || 0) >= 0 ? "+" : ""}${(bot.total_profit || 0).toFixed(2)}
             </p>
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground/60 font-medium">Win%</p>
-            <p className="text-sm font-black font-mono text-foreground">{(bot.win_rate || 0).toFixed(0)}%</p>
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-black">Win Rate</p>
+            <p className="text-sm font-black font-mono text-foreground tracking-tighter">{(bot.win_rate || 0).toFixed(0)}%</p>
           </div>
         </div>
 
         {/* TP/SL/Trades */}
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-          <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-success" />TP ${bot.take_profit}</span>
-          <span className="flex items-center gap-1"><TrendingDown className="h-3 w-3 text-primary" />SL ${bot.stop_loss}</span>
-          <span className="flex items-center gap-1"><Hash className="h-3 w-3 text-accent" />{bot.total_trades || 0}/{bot.max_trades}</span>
+        <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-black/[0.02] border border-black/[0.03]">
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="h-3 w-3 text-success" />
+            <span className="text-[10px] font-mono font-bold text-success">${bot.take_profit}</span>
+          </div>
+          <div className="h-3 w-[1px] bg-black/[0.05]" />
+          <div className="flex items-center gap-1.5">
+            <TrendingDown className="h-3 w-3 text-primary" />
+            <span className="text-[10px] font-mono font-bold text-primary">${bot.stop_loss}</span>
+          </div>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Hash className="h-3 w-3 text-slate-400" />
+            <span className="text-[10px] font-mono font-bold text-slate-500">{bot.total_trades || 0}/{bot.max_trades}</span>
+          </div>
         </div>
 
         {/* Controls */}
         <div className="flex gap-2 pt-1">
           {!isActive && (
-            <Button size="sm" className="flex-1 bg-success/10 text-success hover:bg-success/20 border-0 text-xs"
+            <Button size="sm" className="flex-1 bg-success/10 text-success hover:bg-success/20 border-0 text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300"
               onClick={() => handleStatus("active")}>
-              <Play className="h-3 w-3 mr-1" /> Start
+              <Play className="h-3 w-3 mr-1.5 fill-current" /> Start Bot
             </Button>
           )}
           {isActive && (
-            <Button size="sm" variant="outline" className="flex-1 border-warning/30 text-warning hover:bg-warning/10 text-xs"
+            <Button size="sm" variant="outline" className="flex-1 border-warning/20 bg-warning/[0.02] text-warning hover:bg-warning/10 text-[10px] font-black uppercase tracking-[0.15em]"
               onClick={() => handleStatus("paused")}>
-              <Pause className="h-3 w-3 mr-1" /> Pause
+              <Pause className="h-3 w-3 mr-1.5 fill-current" /> Pause
             </Button>
           )}
           {(isActive || isPaused) && (
-            <Button size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10 text-xs"
+            <Button size="sm" variant="outline" className="border-primary/20 bg-primary/[0.02] text-primary hover:bg-primary/10 text-[10px] font-black uppercase tracking-[0.15em]"
               onClick={() => handleStatus("stopped")}>
-              <Square className="h-3 w-3" />
+              <Square className="h-3 w-3 fill-current" />
             </Button>
           )}
         </div>

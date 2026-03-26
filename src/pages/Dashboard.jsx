@@ -12,7 +12,7 @@ function StatCard({ title, value, icon: Icon, trend, trendUp, accent = "neutral"
     up:      { icon: "bg-success/10 border-success/20",  text: "text-success",     iconColor: "text-success" },
     down:    { icon: "bg-primary/10 border-primary/20",  text: "text-primary",     iconColor: "text-primary" },
     neutral: { icon: "bg-accent/10 border-accent/20",    text: "text-accent",      iconColor: "text-accent" },
-    info:    { icon: "bg-secondary border-border/50",    text: "text-foreground",  iconColor: "text-muted-foreground" },
+    info:    { icon: "bg-slate-100 border-slate-200",    text: "text-slate-900",   iconColor: "text-slate-500" },
   };
   const s = accentMap[accent] || accentMap.neutral;
 
@@ -20,24 +20,29 @@ function StatCard({ title, value, icon: Icon, trend, trendUp, accent = "neutral"
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: "easeOut" }}
-      className="rounded-2xl border border-border/60 bg-card p-5"
+      transition={{ duration: 0.5, delay, ease: [0.23, 1, 0.32, 1] }}
+      className="rounded-2xl border border-black/[0.05] bg-white/80 backdrop-blur-xl p-6 relative overflow-hidden group shadow-sm hover:shadow-md transition-all"
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${s.icon}`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-3xl opacity-[0.08] transition-opacity group-hover:opacity-[0.12] ${
+        accent === "up" ? "bg-success" : accent === "down" ? "bg-primary" : "bg-accent"
+      }`} />
+      
+      <div className="flex items-start justify-between mb-5">
+        <div className={`h-11 w-11 rounded-xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 shadow-sm ${s.icon}`}>
           <Icon className={`h-5 w-5 ${s.iconColor}`} />
         </div>
         {trend !== undefined && (
-          <span className={`flex items-center gap-0.5 text-[11px] font-mono font-bold px-2 py-1 rounded-full ${
-            trendUp ? "text-success bg-success/10" : "text-primary bg-primary/10"
+          <span className={`flex items-center gap-1 text-[10px] font-mono font-black px-2.5 py-1 rounded-lg border ${
+            trendUp ? "text-success bg-success/10 border-success/20" : "text-primary bg-primary/10 border-primary/20"
           }`}>
-            {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-            {Math.abs(trend)}%
+            {trendUp ? "↑" : "↓"} {Math.abs(trend)}%
           </span>
         )}
       </div>
-      <p className="text-2xl font-black font-mono text-foreground tracking-tight">{value}</p>
-      <p className="text-[11px] font-medium text-muted-foreground mt-1 uppercase tracking-wider">{title}</p>
+      <div className="space-y-1">
+        <p className="text-3xl font-black font-mono text-foreground tracking-tighter">{value}</p>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{title}</p>
+      </div>
     </motion.div>
   );
 }

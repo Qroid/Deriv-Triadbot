@@ -28,66 +28,92 @@ export default function AssetAnalysisCard({ asset, data, index = 0, onTrade }) {
   const evenPct = totalDigits > 0 ? ((data.totalEven / totalDigits) * 100).toFixed(1) : "0.0";
   const oddPct = totalDigits > 0 ? ((data.totalOdd / totalDigits) * 100).toFixed(1) : "0.0";
 
-  const isActionable = signal?.type === "STRONG BUY" || signal?.type === "STRONG SELL";
-  const isBuy = signal?.type?.includes("BUY");
-  const isSell = signal?.type?.includes("SELL");
+  const isActionable = signal?.type?.includes("SIGNAL") || signal?.type?.includes("SPIKE");
+  const isBuy = signal?.type?.includes("UP") || signal?.type?.includes("OVER");
+  const isSell = signal?.type?.includes("DOWN") || signal?.type?.includes("UNDER");
 
   const borderClass = isActionable
-    ? (isBuy ? "border-success/30 shadow-[0_0_20px_hsl(142,71%,45%,0.08)]"
-             : "border-destructive/30 shadow-[0_0_20px_hsl(0,72%,51%,0.08)]")
-    : "border-border/40 hover:border-border/70";
+    ? (isBuy ? "border-success/60 shadow-[0_8px_30px_rgb(34,197,94,0.12)] bg-success/[0.02]"
+             : "border-destructive/60 shadow-[0_8px_30px_rgb(239,68,68,0.12)] bg-destructive/[0.02]")
+    : "border-black/[0.08] hover:border-black/[0.15] bg-white/60";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }}
-      className={`rounded-2xl border bg-card/70 backdrop-blur-sm overflow-hidden transition-all duration-300 ${borderClass}`}
+      transition={{ duration: 0.5, delay: index * 0.05, ease: [0.23, 1, 0.32, 1] }}
+      className={`rounded-2xl border backdrop-blur-xl overflow-hidden transition-all duration-500 group shadow-sm hover:shadow-md ${borderClass}`}
     >
       {/* Signal accent line */}
-      <div className={`h-0.5 w-full ${
-        isBuy ? "bg-gradient-to-r from-transparent via-success to-transparent" :
-        isSell ? "bg-gradient-to-r from-transparent via-destructive to-transparent" :
-        "bg-gradient-to-r from-transparent via-border/50 to-transparent"
+      <div className={`h-[2px] w-full transition-opacity duration-500 ${
+        isBuy ? "bg-success" :
+        isSell ? "bg-destructive" :
+        "bg-black/5"
       }`} />
 
-      <div className="p-4 space-y-3">
+      <div className="p-5 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">{SHORT_NAMES[asset]}</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="px-1.5 py-0.5 rounded bg-black/[0.03] border border-black/[0.05]">
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/50">{SHORT_NAMES[asset]}</span>
+              </div>
               {signal && signal.type !== "COLLECTING" && <SignalBadge signal={signal} />}
-              {data.isLive
-                ? <span className="flex items-center gap-0.5 text-[9px] text-success font-bold"><Wifi className="h-2.5 w-2.5" />LIVE</span>
-                : <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/50 font-bold"><WifiOff className="h-2.5 w-2.5" />SIM</span>
-              }
             </div>
-            <p className="text-[11px] text-muted-foreground">{asset}</p>
+            <p className="text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">{asset}</p>
           </div>
           <div className="text-right">
-            <p className="text-base font-black font-mono text-foreground leading-none">
+            <p className="text-xl font-black font-mono text-foreground tracking-tight leading-none">
               {data.price?.toFixed(data.decimals ?? 2)}
             </p>
-            <div className={`flex items-center justify-end gap-0.5 mt-0.5 ${isUp ? "text-success" : "text-destructive"}`}>
-              {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            <div className={`flex items-center justify-end gap-1 mt-1 ${isUp ? "text-success" : "text-destructive"}`}>
               <span className="text-[10px] font-mono font-bold">
-                {isUp ? "+" : ""}{data.changePct?.toFixed(2)}%
+                {isUp ? "▲" : "▼"} {data.changePct?.toFixed(2)}%
               </span>
             </div>
-            {/* Last digit display */}
-            {lastDigit !== null && (
-              <div className={`mt-1 text-xl font-black font-mono ${lastDigit % 2 === 0 ? "text-primary" : "text-accent"}`}>
-                {lastDigit}
-                <span className="text-[9px] font-semibold ml-0.5 opacity-60">{lastDigit % 2 === 0 ? "E" : "O"}</span>
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* Live Indicator */}
+        <div className="flex items-center justify-between py-1.5 border-y border-black/[0.03]">
+          <div className="flex items-center gap-2">
+            {data.isLive
+              ? <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_hsl(142,71%,45%)] animate-pulse" /><span className="text-[10px] text-success font-black tracking-widest">LIVE</span></div>
+              : <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-300" /><span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Simulation</span></div>
+            }
+          </div>
+          {lastDigit !== null && (
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/[0.03] border border-black/[0.05] ${lastDigit % 2 === 0 ? "text-primary" : "text-accent"}`}>
+              <span className="text-sm font-black font-mono">{lastDigit}</span>
+              <span className="text-[9px] font-black opacity-40">{lastDigit % 2 === 0 ? "EVEN" : "ODD"}</span>
+            </div>
+          )}
         </div>
 
         {/* Mini chart */}
         <div className="h-16 -mx-1">
           <LiveChart ticks={data.ticks} changePct={data.changePct} />
+        </div>
+
+        {/* Market Insights */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {signal?.trend && (
+            <div className={`px-2 py-1 rounded-lg border text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shrink-0 ${
+              signal.trend === "BULLISH" ? "bg-success/8 text-success border-success/20" :
+              signal.trend === "BEARISH" ? "bg-destructive/8 text-destructive border-destructive/20" :
+              "bg-secondary/50 text-muted-foreground border-border/20"
+            }`}>
+              <TrendingUp className={`h-2.5 w-2.5 ${signal.trend === "BEARISH" ? "rotate-180" : ""}`} />
+              {signal.trend}
+            </div>
+          )}
+          {signal?.spike && (
+            <div className="px-2 py-1 rounded-lg bg-accent/10 text-accent border border-accent/20 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shrink-0 animate-pulse">
+              <Zap className="h-2.5 w-2.5" />
+              {signal.spike.replace("_", " ")}
+            </div>
+          )}
         </div>
 
         {/* Odd/Even percentages */}

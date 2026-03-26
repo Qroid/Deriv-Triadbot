@@ -71,12 +71,48 @@ export function getDigitColorTier(count, uniqueCounts) {
 }
 
 /**
- * Autoscan strategy — direct port from the original bot.
- * Finds the two least-frequent digits. If they form the pair [0,1] or [8,9],
- * checks if those two digits appeared consecutively in recent ticks.
- * Returns a signal object or null.
+ * Enhanced Market Analysis Engine
+ * Ported and improved from professional binary bot strategies.
  */
-export function runAutoscan(digitCounts, consecutiveDigits) {
+
+export function calculateTrend(ticks, windowSize = 50) {
+  if (ticks.length < windowSize) return "NEUTRAL";
+  const recent = ticks.slice(-windowSize).map(t => parseFloat(t));
+  const first = recent[0];
+  const last = recent[recent.length - 1];
+  const diff = ((last - first) / first) * 100;
+  
+  if (diff > 0.05) return "BULLISH";
+  if (diff < -0.05) return "BEARISH";
+  return "NEUTRAL";
+}
+
+export function detectSpike(ticks, asset) {
+  if (ticks.length < 5) return null;
+  const last = parseFloat(ticks[ticks.length - 1]);
+  const prev = parseFloat(ticks[ticks.length - 2]);
+  const diff = ((last - prev) / prev) * 100;
+
+  if (asset.includes("Boom") && diff > 0.2) return "SPIKE_UP";
+  if (asset.includes("Crash") && diff < -0.2) return "SPIKE_DOWN";
+  if (asset.includes("Step")) {
+    const consecutive = ticks.slice(-10).map((t, i, arr) => {
+      if (i === 0) return true;
+      const d = parseFloat(t) - parseFloat(arr[i-1]);
+      return d > 0;
+    });
+    const ups = consecutive.filter(u => u).length;
+    if (ups >= 8) return "STEP_UP";
+    if (ups <= 2) return "STEP_DOWN";
+  }
+  return null;
+}
+
+/**
+ * Enhanced Autoscan strategy with Confidence Score.
+ * Returns a detailed signal object.
+ */
+export function runAutoscan(digitCounts, consecutiveDigits, ticks, asset) {
   const sorted = Object.entries(digitCounts)
     .map(([d, c]) => ({ digit: parseInt(d), count: c }))
     .sort((a, b) => a.count - b.count);
@@ -84,42 +120,78 @@ export function runAutoscan(digitCounts, consecutiveDigits) {
   const least = sorted[0].digit;
   const almostLeast = sorted[1].digit;
   const pair = [least, almostLeast].sort((a, b) => a - b).join("");
-
+  
+  // Calculate frequency gap (how much less frequent are they?)
+  const avgCount = Object.values(digitCounts).reduce((a, b) => a + b, 0) / 10;
+  const gap = (avgCount - sorted[0].count) / avgCount;
+  
+  let confidence = Math.min(Math.round(gap * 200), 100); // 0-100 score
   let tradeType = null;
   let barrier = null;
 
   if (pair === "01") { tradeType = "OVER"; barrier = 1; }
   else if (pair === "89") { tradeType = "UNDER"; barrier = 8; }
-  else return { type: "NEUTRAL", reason: `Least pair: ${least},${almostLeast} — no valid setup`, pair: null };
+  
+  const trend = calculateTrend(ticks);
+  const spike = detectSpike(ticks, asset);
 
-  if (consecutiveDigits.length >= 2) {
-    const last2 = [
-      consecutiveDigits[consecutiveDigits.length - 2],
-      consecutiveDigits[consecutiveDigits.length - 1],
-    ].sort((a, b) => a - b).join("");
+  // High priority for Spikes on Boom/Crash
+  if (spike) {
+    const isUp = spike === "SPIKE_UP";
+    return {
+      type: isUp ? "SPIKE UP" : "SPIKE DOWN",
+      dir: isUp ? "RISE" : "FALL",
+      contract: isUp ? "BOOM BUY" : "CRASH SELL",
+      confidence: 100,
+      trend,
+      spike,
+      reason: `Detected immediate ${spike.replace("_", " ")} on ${asset}. Catch the momentum!`,
+      pair: null
+    };
+  }
 
-    if (last2 === pair) {
-      return {
-        type: tradeType === "OVER" ? "STRONG BUY" : "STRONG SELL",
-        dir: tradeType === "OVER" ? "RISE" : "FALL",
-        contract: tradeType === "OVER" ? "DIGIT OVER 1" : "DIGIT UNDER 8",
-        barrier,
-        tradeType,
-        reason: `Autoscan: digits ${pair[0]} & ${pair[1]} are least frequent AND appeared consecutively`,
-        pair,
-      };
-    } else {
-      return {
-        type: "NEUTRAL",
-        reason: `Least pair [${pair[0]},${pair[1]}] found — waiting for consecutive appearance (last: ${last2})`,
-        pair,
-      };
-    }
+  // Boost confidence if trend aligns
+  if (tradeType === "OVER" && trend === "BULLISH") confidence += 15;
+  if (tradeType === "UNDER" && trend === "BEARISH") confidence += 15;
+  if (spike) confidence += 30; // Spikes are high-conviction events
+
+  confidence = Math.min(confidence, 100);
+
+  if (!tradeType) {
+    return { 
+      type: "NEUTRAL", 
+      reason: `Least pair: ${least},${almostLeast} — no setup`, 
+      confidence: 0,
+      trend,
+      pair 
+    };
+  }
+
+  const isConsecutive = consecutiveDigits.length >= 2 && 
+    [consecutiveDigits[consecutiveDigits.length - 2], consecutiveDigits[consecutiveDigits.length - 1]]
+    .sort((a, b) => a - b).join("") === pair;
+
+  if (isConsecutive) {
+    const isOver = tradeType === "OVER";
+    return {
+      type: isOver ? "OVER SIGNAL" : "UNDER SIGNAL",
+      dir: isOver ? "RISE" : "FALL",
+      contract: isOver ? "DIGIT OVER 1" : "DIGIT UNDER 8",
+      barrier,
+      tradeType,
+      confidence,
+      trend,
+      spike,
+      reason: `Digit Pattern: ${pair} is the least frequent pair AND appeared consecutively. High probability for ${isOver ? "Over 1" : "Under 8"}.`,
+      pair,
+    };
   }
 
   return {
     type: "NEUTRAL",
-    reason: `Least pair [${pair[0]},${pair[1]}] — collecting consecutive digits`,
+    reason: `Potential ${tradeType} setup with ${pair} (${confidence}% confidence). Waiting for consecutive appearance.`,
+    confidence: Math.round(confidence / 2),
+    trend,
     pair,
   };
 }
@@ -182,7 +254,7 @@ function buildInitialState(assets) {
     }
 
     const uniqueCounts = [...new Set(digitCounts.filter(c => c > 0))];
-    const signal = runAutoscan(digitCounts, consecutiveDigits);
+    const signal = runAutoscan(digitCounts, consecutiveDigits, ticks, asset);
     const openPrice = parseFloat(ticks[0]);
     const lastPrice = parseFloat(ticks[ticks.length - 1]);
 
@@ -274,7 +346,7 @@ export function useDerivTicks(assets) {
     }
 
     const uniqueCounts = [...new Set(s.digitCounts.filter(c => c > 0))];
-    const signal = runAutoscan(s.digitCounts, s.consecutiveDigits);
+    const signal = runAutoscan(s.digitCounts, s.consecutiveDigits, s.ticks, asset);
     const openPrice = parseFloat(s.ticks[0]);
     const lastPrice = parseFloat(priceStr);
 
