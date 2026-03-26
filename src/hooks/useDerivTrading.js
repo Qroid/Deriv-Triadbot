@@ -104,11 +104,16 @@ export function useDerivTrading() {
     const trade = rapidFireQueueRef.current.shift();
     const requestId = `rf_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
+    let contractType = trade.type === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER';
+    if (trade.type === 'RISE') contractType = 'CALL';
+    if (trade.type === 'FALL') contractType = 'PUT';
+    if (trade.type === 'DIFFERS') contractType = 'DIGITDIFF';
+
     wsRef.current.send(JSON.stringify({
       proposal: 1,
       amount: trade.amount,
       basis: 'stake',
-      contract_type: trade.type === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER',
+      contract_type: contractType,
       currency: 'USD',
       duration: 1,
       duration_unit: 't',

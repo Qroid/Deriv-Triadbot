@@ -5,6 +5,9 @@ export default function SignalBadge({ signal }) {
     "SPIKE DOWN":  "bg-primary/20 text-primary border-primary/40 shadow-[0_0_12px_hsl(357,95%,62%,0.3)]",
     "OVER SIGNAL": "bg-success/15 text-success border-success/25",
     "UNDER SIGNAL":"bg-primary/15 text-primary border-primary/25",
+    "RISE SIGNAL": "bg-success/20 text-success border-success/40",
+    "FALL SIGNAL": "bg-primary/20 text-primary border-primary/40",
+    "DIFFERS SIGNAL": "bg-accent/20 text-accent border-accent/40",
     "NEUTRAL":     "bg-white/5 text-muted-foreground/40 border-white/5",
     "COLLECTING":  "bg-white/5 text-muted-foreground/20 border-white/5",
   };

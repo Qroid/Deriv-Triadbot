@@ -29,13 +29,13 @@ export default function AssetAnalysisCard({ asset, data, index = 0, onTrade }) {
   const oddPct = totalDigits > 0 ? ((data.totalOdd / totalDigits) * 100).toFixed(1) : "0.0";
 
   const isActionable = signal?.type?.includes("SIGNAL") || signal?.type?.includes("SPIKE");
-  const isBuy = signal?.type?.includes("UP") || signal?.type?.includes("OVER");
-  const isSell = signal?.type?.includes("DOWN") || signal?.type?.includes("UNDER");
+  const isBuy = signal?.type?.includes("UP") || signal?.type?.includes("OVER") || signal?.type?.includes("RISE");
+  const isSell = signal?.type?.includes("DOWN") || signal?.type?.includes("UNDER") || signal?.type?.includes("FALL") || signal?.type?.includes("DIFFERS");
 
   const borderClass = isActionable
     ? (isBuy ? "border-success/60 shadow-[0_8px_30px_rgb(34,197,94,0.12)] bg-success/[0.02]"
              : "border-destructive/60 shadow-[0_8px_30px_rgb(239,68,68,0.12)] bg-destructive/[0.02]")
-    : "border-black/[0.08] hover:border-black/[0.15] bg-white/60";
+    : "border-border bg-card/60 hover:border-border/15";
 
   return (
     <motion.div

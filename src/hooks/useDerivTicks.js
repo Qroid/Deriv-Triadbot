@@ -150,9 +150,50 @@ export function runAutoscan(digitCounts, consecutiveDigits, ticks, asset) {
     };
   }
 
-  // Boost confidence if trend aligns
   if (tradeType === "OVER" && trend === "BULLISH") confidence += 15;
   if (tradeType === "UNDER" && trend === "BEARISH") confidence += 15;
+  
+  // ─── Rise/Fall & Matches/Differs Logic ──────────────────────────────────────
+  const lastPrice = parseFloat(ticks[ticks.length - 1]);
+  const prevPrice = parseFloat(ticks[ticks.length - 2]);
+  
+  // Rise/Fall signals based on momentum
+  if (trend === "BULLISH" && lastPrice > prevPrice) {
+    return {
+      type: "RISE SIGNAL",
+      dir: "RISE",
+      contract: "RISE",
+      confidence: Math.min(confidence + 20, 100),
+      reason: "Strong bullish momentum detected over 1000 ticks. Trend is your friend!",
+      trend
+    };
+  } else if (trend === "BEARISH" && lastPrice < prevPrice) {
+    return {
+      type: "FALL SIGNAL",
+      dir: "FALL",
+      contract: "FALL",
+      confidence: Math.min(confidence + 20, 100),
+      reason: "Strong bearish momentum detected over 1000 ticks. Trend is your friend!",
+      trend
+    };
+  }
+
+  // Matches/Differs based on Digit Avoidance
+  // If a digit hasn't appeared in the last 50 ticks, it's a candidate for Matches (reversion) or Differs (momentum)
+  const last50 = ticks.slice(-50).map(t => getLastDigit(t, SYMBOL_MAP[asset]));
+  const missingDigit = [0,1,2,3,4,5,6,7,8,9].find(d => !last50.includes(d));
+  if (missingDigit !== undefined) {
+    return {
+      type: "DIFFERS SIGNAL",
+      dir: "DIFFERS",
+      contract: `DIFFERS ${missingDigit}`,
+      barrier: missingDigit,
+      confidence: 95,
+      reason: `Digit ${missingDigit} hasn't appeared in 50 ticks. Extremely high probability for 'Differs'.`,
+      trend
+    };
+  }
+
   if (spike) confidence += 30; // Spikes are high-conviction events
 
   confidence = Math.min(confidence, 100);
