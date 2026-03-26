@@ -14,25 +14,36 @@ export const Toolbox = {
       name: "Trade Parameters",
       colour: "#5C81A6",
       contents: [
+        { kind: "block", type: "trade_definition" },
+        { kind: "block", type: "market" },
+        { kind: "block", type: "stake" },
+        { kind: "block", type: "duration" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Trade Types",
+      colour: "#E30C37",
+      contents: [
         {
-          kind: "block",
-          type: "trade_definition",
+          kind: "category",
+          name: "Turbos",
+          contents: [{ kind: "block", type: "trade_type" }],
         },
         {
-          kind: "block",
-          type: "market",
+          kind: "category",
+          name: "Ups & Downs",
+          contents: [{ kind: "block", type: "trade_type" }],
         },
         {
-          kind: "block",
-          type: "trade_type",
+          kind: "category",
+          name: "Touch & No Touch",
+          contents: [{ kind: "block", type: "trade_type" }],
         },
         {
-          kind: "block",
-          type: "stake",
-        },
-        {
-          kind: "block",
-          type: "duration",
+          kind: "category",
+          name: "Digits",
+          contents: [{ kind: "block", type: "trade_type" }],
         },
       ],
     },
@@ -41,10 +52,7 @@ export const Toolbox = {
       name: "Actions",
       colour: "#5CA65C",
       contents: [
-        {
-          kind: "block",
-          type: "purchase",
-        },
+        { kind: "block", type: "purchase" },
       ],
     },
     {

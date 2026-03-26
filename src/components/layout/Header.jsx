@@ -1,38 +1,9 @@
 import { Link } from "react-router-dom";
-import { Bell, ChevronUp, ChevronDown, Wifi, WifiOff, User } from "lucide-react";
-import { useDerivTicks } from "../../hooks/useDerivTicks";
-
-const TICKER_ASSETS = [
-  "Volatility 10 Index", "Volatility 25 Index", "Volatility 75 Index",
-  "Boom 1000 Index", "Crash 1000 Index", "Step Index",
-];
-const SHORT_NAMES = {
-  "Volatility 10 Index": "V10", "Volatility 25 Index": "V25",
-  "Volatility 75 Index": "V75", "Boom 1000 Index": "BOOM1000",
-  "Crash 1000 Index": "CRASH1000", "Step Index": "STEP",
-};
-
-function TickerItem({ asset, data }) {
-  const isUp = (data?.changePct ?? 0) >= 0;
-  return (
-    <div className="flex items-center gap-2 px-4 whitespace-nowrap">
-      <span className="text-[10px] font-bold text-muted-foreground/70 tracking-wider">{SHORT_NAMES[asset]}</span>
-      <span className="text-[11px] font-mono font-semibold text-foreground">
-        {data?.price > 0 ? data?.price?.toFixed(data?.decimals ?? 2) : "—"}
-      </span>
-      {data?.price > 0 && (
-        <span className={`flex items-center text-[10px] font-mono font-bold ${isUp ? "text-success" : "text-primary"}`}>
-          {isUp ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
-          {Math.abs(data?.changePct ?? 0).toFixed(2)}%
-        </span>
-      )}
-    </div>
-  );
-}
+import { User } from "lucide-react";
+import { useDerivAccount } from "../../hooks/useDerivAccount";
 
 export default function Header() {
-  const marketData = useDerivTicks(TICKER_ASSETS);
-  const isLive = Object.values(marketData).some(d => d?.isLive);
+  const { balance, currency, isAuthorized } = useDerivAccount();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-primary border-b border-white/10 shadow-lg">
@@ -52,14 +23,16 @@ export default function Header() {
           {/* Account Balance */}
           <div className="hidden md:flex flex-col items-end mr-2">
             <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Balance</p>
-            <p className="text-sm font-black text-white font-mono leading-none">$10,245.50</p>
+            <p className="text-sm font-black text-white font-mono leading-none">
+              {isAuthorized ? `${currency} ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}
+            </p>
           </div>
 
           <div className={`hidden sm:flex items-center gap-2 rounded-xl px-3.5 py-1.5 border text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-500 ${
-            isLive ? "bg-white/10 border-white/20 text-white shadow-sm" : "bg-black/5 border-black/5 text-white/20"
+            isAuthorized ? "bg-white/10 border-white/20 text-white shadow-sm" : "bg-black/5 border-black/5 text-white/20"
           }`}>
-            <div className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-success animate-pulse" : "bg-white/10"}`} />
-            {isLive ? "Live Market" : "Connecting..."}
+            <div className={`h-1.5 w-1.5 rounded-full ${isAuthorized ? "bg-success animate-pulse" : "bg-white/10"}`} />
+            {isAuthorized ? "Live Market" : "Connecting..."}
           </div>
           <Link to="/settings" className="h-10 w-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all duration-300">
             <User className="h-5 w-5 text-white" />
