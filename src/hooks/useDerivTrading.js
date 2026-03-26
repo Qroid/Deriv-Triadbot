@@ -65,6 +65,12 @@ export function useDerivTrading() {
       // 2. Handle Buy Completion
       if (data.msg_type === 'buy') {
         toast.success('Trade Placed Successfully');
+        // Start watching this specific contract for results
+        ws.send(JSON.stringify({
+          proposal_open_contract: 1,
+          contract_id: data.buy.contract_id,
+          subscribe: 1
+        }));
         if (isRapidFireActive) {
           setTimeout(processNextRapidFireTrade, 100);
         }
