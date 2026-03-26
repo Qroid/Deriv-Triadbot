@@ -48,15 +48,6 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Live ticker */}
-        <div className="flex-1 overflow-hidden relative hidden sm:block">
-          <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-primary to-transparent z-10 pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-primary to-transparent z-10 pointer-events-none" />
-          <div className="flex h-16 items-center overflow-x-auto scrollbar-none gap-2">
-            {TICKER_ASSETS.map(a => <TickerItem key={a} asset={a} data={marketData[a]} />)}
-          </div>
-        </div>
-
         <div className="flex items-center gap-3 shrink-0 ml-auto">
           {/* Account Balance */}
           <div className="hidden md:flex flex-col items-end mr-2">
