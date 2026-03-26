@@ -21,9 +21,15 @@ export function useDerivTrading() {
   });
 
   const [isRapidFireActive, setIsRapidFireActive] = useState(false);
+  const isRapidFireActiveRef = useRef(false);
   const rapidFireQueueRef = useRef([]);
   const wsRef = useRef(null);
   const proposalCacheRef = useRef({});
+
+  // Sync ref with state
+  useEffect(() => {
+    isRapidFireActiveRef.current = isRapidFireActive;
+  }, [isRapidFireActive]);
 
   // Connect WebSocket for trading
   useEffect(() => {
@@ -40,10 +46,13 @@ export function useDerivTrading() {
     ws.onmessage = (msg) => {
       const data = JSON.parse(msg.data);
       const requestId = data.passthrough?.request_id;
+      
+      // Access the latest isRapidFireActive via a ref or local closure if needed,
+      // but the callback processNextRapidFireTrade will be stable.
 
       if (data.error) {
         toast.error(`Trade Error: ${data.error.message}`);
-        if (isRapidFireActive) processNextRapidFireTrade();
+        if (isRapidFireActiveRef.current) processNextRapidFireTrade();
         return;
       }
 
@@ -71,7 +80,7 @@ export function useDerivTrading() {
           contract_id: data.buy.contract_id,
           subscribe: 1
         }));
-        if (isRapidFireActive) {
+        if (isRapidFireActiveRef.current) {
           setTimeout(processNextRapidFireTrade, 100);
         }
       }
@@ -98,7 +107,7 @@ export function useDerivTrading() {
     return () => {
       if (wsRef.current) wsRef.current.close();
     };
-  }, [isRapidFireActive]);
+  }, []); // Only connect once on mount
 
   const processNextRapidFireTrade = useCallback(() => {
     if (rapidFireQueueRef.current.length === 0) {

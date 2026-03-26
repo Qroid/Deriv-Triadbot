@@ -1,9 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bot, History, LineChart, Settings } from "lucide-react";
+import { LayoutDashboard, Bot, History, LineChart, Settings, Blocks } from "lucide-react";
 
 const navItems = [
   { path: "/", label: "Home", icon: LayoutDashboard },
   { path: "/bots", label: "Bots", icon: Bot },
+  { path: "/builder", label: "Builder", icon: Blocks },
   { path: "/market", label: "Scanner", icon: LineChart },
   { path: "/history", label: "History", icon: History },
   { path: "/settings", label: "Settings", icon: Settings },

@@ -10,6 +10,7 @@ import Bots from './pages/Bots';
 import TradeHistory from './pages/TradeHistory';
 import Settings from './pages/Settings';
 import MarketAnalysis from './pages/MarketAnalysis';
+import BotBuilder from './pages/BotBuilder';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings } = useAuth();
@@ -32,6 +33,7 @@ const AuthenticatedApp = () => {
         <Route path="/history" element={<TradeHistory />} />
         <Route path="/market" element={<MarketAnalysis />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/builder" element={<BotBuilder />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>
     </Routes>
