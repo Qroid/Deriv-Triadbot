@@ -9,36 +9,36 @@
     --font-inter: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* Base theme (Dark by default for light sensitivity) */
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
+    /* Softer Dark Theme (Not full black, easier on the eyes) */
+    --background: 222 47% 11%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 13%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 213 31% 91%;
     --primary: 346 84% 49%;
     --primary-foreground: 210 20% 98%;
-    --secondary: 215 27.9% 16.9%;
+    --secondary: 222 47% 18%;
     --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
+    --muted: 222 47% 18%;
+    --muted-foreground: 215 20.2% 65.1%;
     --accent: 178 42% 48%;
     --accent-foreground: 210 20% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 20% 98%;
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
+    --border: 222 47% 18%;
+    --input: 222 47% 18%;
     --ring: 346 84% 49%;
     --radius: 1rem;
-    --sidebar-background: 224 71.4% 4.1%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-background: 222 47% 10%;
+    --sidebar-foreground: 213 31% 91%;
     --sidebar-primary: 346 84% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 222 47% 15%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
