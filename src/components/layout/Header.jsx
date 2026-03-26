@@ -18,12 +18,14 @@ function TickerItem({ asset, data }) {
     <div className="flex items-center gap-2 px-4 whitespace-nowrap">
       <span className="text-[10px] font-bold text-muted-foreground/70 tracking-wider">{SHORT_NAMES[asset]}</span>
       <span className="text-[11px] font-mono font-semibold text-foreground">
-        {data?.price?.toFixed(data?.decimals ?? 2) ?? "—"}
+        {data?.price > 0 ? data?.price?.toFixed(data?.decimals ?? 2) : "—"}
       </span>
-      <span className={`flex items-center text-[10px] font-mono font-bold ${isUp ? "text-success" : "text-primary"}`}>
-        {isUp ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
-        {Math.abs(data?.changePct ?? 0).toFixed(2)}%
-      </span>
+      {data?.price > 0 && (
+        <span className={`flex items-center text-[10px] font-mono font-bold ${isUp ? "text-success" : "text-primary"}`}>
+          {isUp ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+          {Math.abs(data?.changePct ?? 0).toFixed(2)}%
+        </span>
+      )}
     </div>
   );
 }
@@ -63,10 +65,10 @@ export default function Header() {
           </div>
 
           <div className={`hidden sm:flex items-center gap-2 rounded-xl px-3.5 py-1.5 border text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-500 ${
-            isLive ? "bg-white/10 border-white/20 text-white shadow-sm" : "bg-black/5 border-black/5 text-white/40"
+            isLive ? "bg-white/10 border-white/20 text-white shadow-sm" : "bg-black/5 border-black/5 text-white/20"
           }`}>
-            <div className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-success animate-pulse" : "bg-white/20"}`} />
-            {isLive ? "Live Market" : "Simulation"}
+            <div className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-success animate-pulse" : "bg-white/10"}`} />
+            {isLive ? "Live Market" : "Connecting..."}
           </div>
           <Link to="/settings" className="h-10 w-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all duration-300">
             <User className="h-5 w-5 text-white" />

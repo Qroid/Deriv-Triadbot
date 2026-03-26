@@ -91,29 +91,27 @@ export default function MarketAnalysis() {
           </div>
 
           {/* Market Sentiment */}
-          <div className="flex items-center gap-2 bg-secondary/40 rounded-2xl p-3 border border-border/40">
-            <div className="text-center px-3">
+          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-black/5 shadow-sm">
+            <div className="text-center px-3 border-r border-black/5">
               <div className="flex items-center gap-1 text-success">
                 <TrendingUp className="h-3.5 w-3.5" />
                 <span className="text-lg font-black font-mono">{summaryStats.positive}</span>
               </div>
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Positive</p>
+              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-black">Positive</p>
             </div>
-            <div className="h-8 w-px bg-border/50" />
-            <div className="text-center px-3">
-              <div className="flex items-center gap-1 text-warning">
+            <div className="text-center px-3 border-r border-black/5">
+              <div className="flex items-center gap-1 text-slate-400">
                 <Minus className="h-3.5 w-3.5" />
                 <span className="text-lg font-black font-mono">{summaryStats.neutral}</span>
               </div>
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Neutral</p>
+              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-black">Neutral</p>
             </div>
-            <div className="h-8 w-px bg-border/50" />
             <div className="text-center px-3">
-              <div className="flex items-center gap-1 text-destructive">
+              <div className="flex items-center gap-1 text-primary">
                 <TrendingDown className="h-3.5 w-3.5" />
                 <span className="text-lg font-black font-mono">{summaryStats.negative}</span>
               </div>
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Negative</p>
+              <p className="text-[9px] uppercase tracking-wider text-slate-400 font-black">Negative</p>
             </div>
           </div>
         </div>

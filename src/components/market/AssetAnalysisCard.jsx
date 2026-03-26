@@ -65,11 +65,11 @@ export default function AssetAnalysisCard({ asset, data, index = 0, onTrade }) {
           </div>
           <div className="text-right">
             <p className="text-xl font-black font-mono text-foreground tracking-tight leading-none">
-              {data.price?.toFixed(data.decimals ?? 2)}
+              {data.price > 0 ? data.price?.toFixed(data.decimals ?? 2) : "—"}
             </p>
             <div className={`flex items-center justify-end gap-1 mt-1 ${isUp ? "text-success" : "text-destructive"}`}>
               <span className="text-[10px] font-mono font-bold">
-                {isUp ? "▲" : "▼"} {data.changePct?.toFixed(2)}%
+                {data.price > 0 ? `${isUp ? "▲" : "▼"} ${data.changePct?.toFixed(2)}%` : ""}
               </span>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default function AssetAnalysisCard({ asset, data, index = 0, onTrade }) {
           <div className="flex items-center gap-2">
             {data.isLive
               ? <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_hsl(142,71%,45%)] animate-pulse" /><span className="text-[10px] text-success font-black tracking-widest">LIVE</span></div>
-              : <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-300" /><span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Simulation</span></div>
+              : <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-300" /><span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Waiting for data...</span></div>
             }
           </div>
           {lastDigit !== null && (
