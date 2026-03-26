@@ -37,8 +37,8 @@ export default function Header() {
       <div className="flex items-center h-16 px-4 lg:px-6 gap-4">
         {/* Deriv-style logo */}
         <Link to="/" className="flex items-center gap-3 shrink-0 group">
-          <div className="h-10 w-10 rounded-2xl bg-white flex items-center justify-center shadow-md transition-transform duration-500 group-hover:rotate-[360deg]">
-            <span className="text-primary font-black text-xl leading-none">D</span>
+          <div className="h-10 w-12 rounded-2xl bg-white flex items-center justify-center shadow-md transition-transform duration-500 group-hover:rotate-[360deg]">
+            <span className="text-primary font-black text-xl leading-none tracking-tighter">TD</span>
           </div>
           <div className="flex flex-col">
             <h1 className="text-[16px] font-black text-white tracking-tight leading-none">Triadbot</h1>
