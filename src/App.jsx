@@ -4,7 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import Layout from './components/Layout';
+import Layout from './components/layout';
 import Dashboard from './pages/Dashboard';
 import Bots from './pages/Bots';
 import TradeHistory from './pages/TradeHistory';
