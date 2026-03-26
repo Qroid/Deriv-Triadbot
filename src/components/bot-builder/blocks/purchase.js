@@ -8,8 +8,19 @@ const purchase = {
       "type": "field_dropdown",
       "name": "PURCHASE_TYPE",
       "options": [
+        // Dependent on trade_type, but we'll provide common ones
         [ "Rise", "CALL" ],
         [ "Fall", "PUT" ],
+        [ "Higher", "CALL" ],
+        [ "Lower", "PUT" ],
+        [ "Matches", "DIGITMATCH" ],
+        [ "Differs", "DIGITDIFF" ],
+        [ "Even", "DIGITEVEN" ],
+        [ "Odd", "DIGITODD" ],
+        [ "Over", "DIGITOVER" ],
+        [ "Under", "DIGITUNDER" ],
+        [ "Touch", "ONETOUCH" ],
+        [ "No Touch", "NOTOUCH" ],
       ]
     }
   ],

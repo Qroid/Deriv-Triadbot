@@ -8,19 +8,24 @@ const tradeType = {
       "type": "field_dropdown",
       "name": "TRADE_TYPE",
       "options": [
-        [ "Rise", "CALL" ],
-        [ "Fall", "PUT" ],
-        [ "Digit Over", "DIGITOVER" ],
-        [ "Digit Under", "DIGITUNDER" ],
-        [ "Digit Matches", "DIGITMATCH" ],
-        [ "Digit Differs", "DIGITDIFF" ],
+        // Ups & Downs
+        [ "Rise/Fall", "rise_fall" ],
+        [ "Higher/Lower", "higher_lower" ],
+        // Digits
+        [ "Matches/Differs", "matches_differs" ],
+        [ "Even/Odd", "even_odd" ],
+        [ "Over/Under", "over_under" ],
+        // Touch & No Touch
+        [ "Touch/No Touch", "touch_no_touch" ],
+        // Turbos
+        [ "Turbos", "turbos" ],
       ]
     }
   ],
   "previousStatement": null,
   "nextStatement": null,
   "colour": 290,
-  "tooltip": "Select the trade type",
+  "tooltip": "Select the trade type from Deriv Options",
   "helpUrl": ""
 };
 
