@@ -75,7 +75,7 @@ export function getDigitColorTier(count, uniqueCounts) {
  * Ported and improved from professional binary bot strategies.
  */
 
-export function calculateTrend(ticks, windowSize = 50) {
+export function calculateTrend(ticks, windowSize = 1000) {
   if (ticks.length < windowSize) return "NEUTRAL";
   const recent = ticks.slice(-windowSize).map(t => parseFloat(t));
   const first = recent[0];
@@ -196,78 +196,23 @@ export function runAutoscan(digitCounts, consecutiveDigits, ticks, asset) {
   };
 }
 
-// ─── GBM Simulation Fallback ─────────────────────────────────────────────────
-const SIM_PROFILES = {
-  R_10:      { base: 9823.42,  v: 0.0010, type: "volatility" },
-  R_25:      { base: 24831.25, v: 0.0025, type: "volatility" },
-  R_50:      { base: 5028.452, v: 0.0050, type: "volatility" },
-  R_75:      { base: 7634.218, v: 0.0075, type: "volatility" },
-  R_100:     { base: 100321.4, v: 0.0100, type: "volatility" },
-  BOOM1000:  { base: 98432.15, v: 0.0020, type: "boom",  spikeEvery: 1000, spikeDir: 1 },
-  BOOM500:   { base: 98123.45, v: 0.0022, type: "boom",  spikeEvery: 500,  spikeDir: 1 },
-  CRASH1000: { base: 7834.21,  v: 0.0020, type: "crash", spikeEvery: 1000, spikeDir: -1 },
-  CRASH500:  { base: 7612.33,  v: 0.0022, type: "crash", spikeEvery: 500,  spikeDir: -1 },
-  STPIDX:    { base: 9102.10,  v: 0.0001, type: "step",  step: 0.10 },
-  RDBULL100: { base: 1287.540, v: 0.0008, type: "range" },
-  RDBULL200: { base: 1312.820, v: 0.0008, type: "range" },
-};
-
-function simNextPrice(last, profile) {
-  if (profile.type === "step") return last + (Math.random() > 0.5 ? 1 : -1) * profile.step;
-  if (profile.type === "boom") {
-    if (Math.random() < 1 / profile.spikeEvery) return last * (1 + profile.v * 12);
-    return last * (1 - Math.abs(Math.random() * profile.v));
-  }
-  if (profile.type === "crash") {
-    if (Math.random() < 1 / profile.spikeEvery) return last * (1 - profile.v * 12);
-    return last * (1 + Math.abs(Math.random() * profile.v));
-  }
-  return last * (1 + (Math.random() - 0.5) * 2 * profile.v);
-}
-
 // ─── State Builder ────────────────────────────────────────────────────────────
 function buildInitialState(assets) {
   const state = {};
   assets.forEach(asset => {
     const symbol = SYMBOL_MAP[asset];
     const decimals = getDecimalPlaces(symbol);
-    const profile = SIM_PROFILES[symbol];
-    let price = profile?.base ?? 10000;
-    const ticks = [];
-    const digitCounts = Array(10).fill(0);
-    const consecutiveDigits = [];
-    let totalEven = 0, totalOdd = 0;
-
-    for (let i = 0; i < 80; i++) {
-      price = simNextPrice(price, profile || { type: "volatility", v: 0.005 });
-      const priceStr = price.toFixed(decimals);
-      ticks.push(priceStr);
-      const d = getLastDigit(priceStr, symbol);
-      if (d !== null) {
-        digitCounts[d]++;
-        if (d % 2 === 0) totalEven++; else totalOdd++;
-        if (consecutiveDigits.length === 0 || consecutiveDigits[consecutiveDigits.length - 1] !== d) {
-          consecutiveDigits.push(d);
-          if (consecutiveDigits.length > 2) consecutiveDigits.shift();
-        }
-      }
-    }
-
-    const uniqueCounts = [...new Set(digitCounts.filter(c => c > 0))];
-    const signal = runAutoscan(digitCounts, consecutiveDigits, ticks, asset);
-    const openPrice = parseFloat(ticks[0]);
-    const lastPrice = parseFloat(ticks[ticks.length - 1]);
-
+    
     state[asset] = {
-      ticks,
-      price: lastPrice,
-      changePct: ((lastPrice - openPrice) / openPrice) * 100,
-      digitCounts: [...digitCounts],
-      uniqueCounts,
-      consecutiveDigits: [...consecutiveDigits],
-      totalEven,
-      totalOdd,
-      signal,
+      ticks: [],
+      price: 0,
+      changePct: 0,
+      digitCounts: Array(10).fill(0),
+      uniqueCounts: [],
+      consecutiveDigits: [],
+      totalEven: 0,
+      totalOdd: 0,
+      signal: { type: "COLLECTING", reason: "Initializing...", confidence: 0 },
       symbol,
       decimals,
       isLive: false,
@@ -283,38 +228,20 @@ export function useDerivTicks(assets) {
   const [data, setData] = useState(() => buildInitialState(assets));
   const wsRef = useRef(null);
   const stateRef = useRef({}); // Mutable per-asset state (ticks, counts)
-  const simIntervalRef = useRef(null);
   const isLiveRef = useRef(false);
 
-  // Initialize mutable state from initial render
+  // Initialize mutable state
   useEffect(() => {
     assets.forEach(asset => {
-      const symbol = SYMBOL_MAP[asset];
-      const decimals = getDecimalPlaces(symbol);
-      const profile = SIM_PROFILES[symbol];
-      let price = profile?.base ?? 10000;
-      const ticks = [];
-      const digitCounts = Array(10).fill(0);
-      const consecutiveDigits = [];
-      let totalEven = 0, totalOdd = 0;
-
-      for (let i = 0; i < 80; i++) {
-        price = simNextPrice(price, profile || { type: "volatility", v: 0.005 });
-        const priceStr = price.toFixed(decimals);
-        ticks.push(priceStr);
-        const d = getLastDigit(priceStr, symbol);
-        if (d !== null) {
-          digitCounts[d]++;
-          if (d % 2 === 0) totalEven++; else totalOdd++;
-          if (consecutiveDigits.length === 0 || consecutiveDigits[consecutiveDigits.length - 1] !== d) {
-            consecutiveDigits.push(d);
-            if (consecutiveDigits.length > 2) consecutiveDigits.shift();
-          }
-        }
-      }
-      stateRef.current[asset] = { ticks, digitCounts, consecutiveDigits, totalEven, totalOdd };
+      stateRef.current[asset] = { 
+        ticks: [], 
+        digitCounts: Array(10).fill(0), 
+        consecutiveDigits: [], 
+        totalEven: 0, 
+        totalOdd: 0 
+      };
     });
-  }, []);
+  }, [assets]);
 
   const processTick = useCallback((asset, priceStr) => {
     const symbol = SYMBOL_MAP[asset];
@@ -390,7 +317,7 @@ export function useDerivTicks(assets) {
           assets.forEach(asset => {
             const symbol = SYMBOL_MAP[asset];
             ws.send(JSON.stringify({
-              ticks_history: symbol, end: "latest", count: 500, style: "ticks"
+              ticks_history: symbol, end: "latest", count: 1000, style: "ticks"
             }));
           });
         }
@@ -432,22 +359,6 @@ export function useDerivTicks(assets) {
       ws.onclose = () => { isLiveRef.current = false; };
 
       return () => { ws.close(); };
-    } else {
-      // ── Simulation fallback ──
-      simIntervalRef.current = setInterval(() => {
-        assets.forEach(asset => {
-          const symbol = SYMBOL_MAP[asset];
-          const decimals = getDecimalPlaces(symbol);
-          const profile = SIM_PROFILES[symbol] || { type: "volatility", v: 0.005 };
-          const s = stateRef.current[asset];
-          if (!s || s.ticks.length === 0) return;
-          const lastPrice = parseFloat(s.ticks[s.ticks.length - 1]);
-          const newPrice = simNextPrice(lastPrice, profile);
-          processTick(asset, newPrice.toFixed(decimals));
-        });
-      }, 700);
-
-      return () => clearInterval(simIntervalRef.current);
     }
   }, [assets, processTick]);
 
