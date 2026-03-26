@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Deriv Brand — Dark */
+    --background: 220 16% 8%;
+    --foreground: 220 20% 95%;
+    --card: 220 16% 11%;
+    --card-foreground: 220 20% 95%;
+    --popover: 220 16% 11%;
+    --popover-foreground: 220 20% 95%;
+    --primary: 357 95% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 16%;
+    --secondary-foreground: 220 10% 70%;
+    --muted: 220 16% 14%;
+    --muted-foreground: 220 10% 50%;
+    --accent: 178 42% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 357 95% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 16% 18%;
+    --input: 220 16% 18%;
+    --ring: 357 95% 62%;
+    --success: 145 55% 45%;
+    --warning: 38 92% 50%;
+    --radius: 0.75rem;
+    --sidebar-background: 220 16% 7%;
+    --sidebar-foreground: 220 10% 70%;
+    --sidebar-primary: 357 95% 62%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 16% 14%;
+    --sidebar-accent-foreground: 220 20% 95%;
+    --sidebar-border: 220 16% 14%;
+    --sidebar-ring: 357 95% 62%;
+    --chart-1: 357 95% 62%;
+    --chart-2: 145 55% 45%;
+    --chart-3: 178 42% 48%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 220 10% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: hsl(220 16% 11%); }
+::-webkit-scrollbar-thumb { background: hsl(220 16% 22%); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(220 16% 30%); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }

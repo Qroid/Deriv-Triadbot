@@ -1,0 +1,133 @@
+{
+  "name": "TradingBot",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Bot Name"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "paused",
+        "stopped"
+      ],
+      "title": "Status",
+      "default": "stopped"
+    },
+    "asset": {
+      "type": "string",
+      "title": "Asset",
+      "enum": [
+        "Volatility 10 Index",
+        "Volatility 25 Index",
+        "Volatility 50 Index",
+        "Volatility 75 Index",
+        "Volatility 100 Index",
+        "Boom 1000 Index",
+        "Boom 500 Index",
+        "Crash 1000 Index",
+        "Crash 500 Index",
+        "Step Index",
+        "Range Break 100 Index",
+        "Range Break 200 Index"
+      ]
+    },
+    "strategy": {
+      "type": "string",
+      "title": "Strategy",
+      "enum": [
+        "Martingale",
+        "D'Alembert",
+        "Oscar's Grind",
+        "Fibonacci",
+        "Fixed Stake",
+        "Percentage Stake",
+        "Reverse Martingale"
+      ]
+    },
+    "contract_type": {
+      "type": "string",
+      "title": "Contract Type",
+      "enum": [
+        "Rise/Fall",
+        "Even/Odd",
+        "Matches/Differs",
+        "Over/Under",
+        "Higher/Lower"
+      ]
+    },
+    "initial_stake": {
+      "type": "number",
+      "title": "Initial Stake (USD)",
+      "minimum": 0.35
+    },
+    "take_profit": {
+      "type": "number",
+      "title": "Take Profit (USD)"
+    },
+    "stop_loss": {
+      "type": "number",
+      "title": "Stop Loss (USD)"
+    },
+    "max_trades": {
+      "type": "integer",
+      "title": "Max Trades",
+      "default": 100
+    },
+    "duration": {
+      "type": "integer",
+      "title": "Duration (ticks)",
+      "default": 5,
+      "minimum": 1,
+      "maximum": 10
+    },
+    "multiplier": {
+      "type": "number",
+      "title": "Multiplier",
+      "default": 2,
+      "minimum": 1
+    },
+    "total_profit": {
+      "type": "number",
+      "title": "Total Profit",
+      "default": 0
+    },
+    "total_trades": {
+      "type": "integer",
+      "title": "Total Trades",
+      "default": 0
+    },
+    "win_rate": {
+      "type": "number",
+      "title": "Win Rate %",
+      "default": 0
+    },
+    "prediction": {
+      "type": "string",
+      "title": "Prediction",
+      "enum": [
+        "Rise",
+        "Fall",
+        "Even",
+        "Odd",
+        "Matches",
+        "Differs",
+        "Over",
+        "Under",
+        "Higher",
+        "Lower"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "asset",
+    "strategy",
+    "contract_type",
+    "initial_stake",
+    "take_profit",
+    "stop_loss"
+  ]
+}

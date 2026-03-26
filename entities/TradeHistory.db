@@ -1,0 +1,66 @@
+{
+  "name": "TradeHistory",
+  "type": "object",
+  "properties": {
+    "bot_id": {
+      "type": "string",
+      "title": "Bot ID"
+    },
+    "bot_name": {
+      "type": "string",
+      "title": "Bot Name"
+    },
+    "asset": {
+      "type": "string",
+      "title": "Asset"
+    },
+    "contract_type": {
+      "type": "string",
+      "title": "Contract Type"
+    },
+    "prediction": {
+      "type": "string",
+      "title": "Prediction"
+    },
+    "stake": {
+      "type": "number",
+      "title": "Stake (USD)"
+    },
+    "payout": {
+      "type": "number",
+      "title": "Payout (USD)"
+    },
+    "profit": {
+      "type": "number",
+      "title": "Profit (USD)"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "win",
+        "loss"
+      ],
+      "title": "Result"
+    },
+    "entry_price": {
+      "type": "number",
+      "title": "Entry Price"
+    },
+    "exit_price": {
+      "type": "number",
+      "title": "Exit Price"
+    },
+    "duration_ticks": {
+      "type": "integer",
+      "title": "Duration (Ticks)"
+    }
+  },
+  "required": [
+    "bot_id",
+    "bot_name",
+    "asset",
+    "stake",
+    "profit",
+    "result"
+  ]
+}
