@@ -8,10 +8,13 @@ import BotCard from "../components/bots/BotCard";
 import BotFormDialog from "../components/bots/BotFormDialog";
 import { motion } from "framer-motion";
 import { analyzeBotXml } from "@/utils/bot-analyzer";
+import BotAnalysisDialog from "../components/bots/BotAnalysisDialog";
 import { toast } from "sonner";
 
 export default function Bots() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [analysisDialogOpen, setAnalysisDialogOpen] = useState(false);
+  const [analysisData, setAnalysisData] = useState(null);
   const [editBot, setEditBot] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -31,8 +34,20 @@ export default function Bots() {
     setImporting(true);
     try {
       const xmlString = await file.text();
-      const botData = analyzeBotXml(xmlString);
-      
+      const analysis = analyzeBotXml(xmlString);
+      setAnalysisData(analysis);
+      setAnalysisDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to analyze bot:", error);
+      toast.error("Failed to analyze bot file. Make sure it's a valid Deriv bot XML.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleConfirmImport = async (botData) => {
+    try {
       await appStorage.TradingBot.create({
         ...botData,
         status: "stopped",
@@ -42,13 +57,10 @@ export default function Bots() {
       });
       
       queryClient.invalidateQueries({ queryKey: ["tradingBots"] });
-      toast.success("Bot imported and analyzed successfully!");
+      toast.success("Bot created successfully from XML analysis!");
+      setAnalysisDialogOpen(false);
     } catch (error) {
-      console.error("Failed to import bot:", error);
-      toast.error("Failed to analyze bot file. Make sure it's a valid Deriv bot XML.");
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      toast.error("Failed to save imported bot.");
     }
   };
 
@@ -155,6 +167,13 @@ export default function Bots() {
       )}
 
       <BotFormDialog open={dialogOpen} onOpenChange={setDialogOpen} editBot={editBot} />
+      
+      <BotAnalysisDialog 
+        open={analysisDialogOpen} 
+        onOpenChange={setAnalysisDialogOpen} 
+        analysis={analysisData} 
+        onConfirm={handleConfirmImport} 
+      />
     </div>
   );
 }
