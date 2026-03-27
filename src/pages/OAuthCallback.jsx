@@ -10,26 +10,28 @@ export default function OAuthCallback() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const returnedState = params.get('state');
-    const storedState = sessionStorage.getItem('oauth_state');
-    
-    // 1. Verify CSRF State
-    if (returnedState !== storedState) {
-      console.warn('OAuth state mismatch. Potential CSRF detected.');
-      // Continue for now but log warning
-    }
+    // Deriv OAuth can return params in either the query string OR the hash fragment
+    const getParams = () => {
+      const queryParams = new URLSearchParams(location.search);
+      const hashParams = new URLSearchParams(location.hash.replace('#', '?'));
+      
+      // Merge both, query taking precedence
+      const combined = {};
+      for (const [key, value] of hashParams.entries()) combined[key] = value;
+      for (const [key, value] of queryParams.entries()) combined[key] = value;
+      return combined;
+    };
 
+    const params = getParams();
     const accounts = [];
     
-    // 2. Extract accounts/tokens from URL (Deriv Legacy Support)
-    // Deriv OAuth returns acct1, token1, cur1, acct2, token2, cur2...
+    // Extract accounts/tokens from params (acct1, token1, cur1...)
     let i = 1;
-    while (params.has(`acct${i}`)) {
+    while (params[`acct${i}`]) {
       accounts.push({
-        loginid: params.get(`acct${i}`),
-        token: params.get(`token${i}`),
-        currency: params.get(`cur${i}`),
+        loginid: params[`acct${i}`],
+        token: params[`token${i}`],
+        currency: params[`cur${i}`],
       });
       i++;
     }
@@ -37,19 +39,14 @@ export default function OAuthCallback() {
     if (accounts.length > 0) {
       localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
       localStorage.setItem('active_loginid', accounts[0].loginid);
-      
-      // Also store the primary token in the legacy key for compatibility
       localStorage.setItem('deriv_token', accounts[0].token);
 
-      // 3. Clean up PKCE session storage
-      sessionStorage.removeItem('pkce_code_verifier');
-      sessionStorage.removeItem('oauth_state');
-
       setStatus('success');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate('/'), 1500);
     } else {
+      console.error('OAuth Failed. Params received:', params);
       setStatus('error');
-      setErrorMessage(params.get('error') || 'Authentication failed. No accounts found.');
+      setErrorMessage(params['error'] || 'Authentication failed. No accounts found in the response.');
     }
   }, [location, navigate]);
 
