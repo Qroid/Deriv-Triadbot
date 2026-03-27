@@ -9,7 +9,7 @@ export default function Layout() {
       <Header />
       <div className="flex">
         <Sidebar />
-        <main className="flex-1 lg:ml-64 min-h-[calc(100vh-3.5rem)] pb-20 lg:pb-0">
+        <main className="flex-1 lg:ml-64 min-h-[calc(100vh-4rem)] pb-20 lg:pb-0">
           <Outlet />
         </main>
       </div>

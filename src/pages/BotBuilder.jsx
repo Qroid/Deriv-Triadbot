@@ -55,8 +55,16 @@ export default function BotBuilder() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const content = e.target.result;
+        let content = e.target.result;
         if (typeof content === 'string') {
+          // Pre-process XML to fix "Sabotaged" namespaces and malformed characters
+          // 1. Remove backticks from xmlns attributes (common in sabotaged bots)
+          content = content.replace(/xmlns\s*=\s*"`([^`]+)`"/g, 'xmlns="$1"');
+          // 2. Fix spaces in xmlns if any
+          content = content.replace(/xmlns\s*=\s*"\s+([^"]+)\s+"/g, 'xmlns="$1"');
+          // 3. Remove other common sabotage patterns
+          content = content.replace(/`http:\/\/www\.w3\.org\/1999\/xhtml`/g, 'http://www.w3.org/1999/xhtml');
+          
           setXml(content);
         }
       };
@@ -65,8 +73,8 @@ export default function BotBuilder() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-background">
-      <div className="p-2 border-b flex items-center gap-2 bg-card shadow-sm z-10">
+    <div className="h-[calc(100vh-64px-80px)] lg:h-[calc(100vh-64px)] w-full flex flex-col bg-background overflow-hidden">
+      <div className="p-2 border-b flex items-center gap-2 bg-card shadow-sm z-10 shrink-0">
         <Button size="sm" onClick={() => fileInputRef.current.click()}>Load Bot</Button>
         <Button size="sm" variant="success" onClick={() => run(workspaceRef.current)} disabled={isRunning}>
           {isRunning ? 'Running...' : 'Run Bot'}
@@ -79,7 +87,7 @@ export default function BotBuilder() {
           accept=".xml"
         />
       </div>
-      <div className="flex-grow h-full w-full relative overflow-hidden">
+      <div className="flex-grow w-full relative overflow-hidden">
         <div ref={blocklyDiv} className="absolute inset-0 w-full h-full" />
         {log.length > 0 && (
           <div className="absolute bottom-0 left-0 right-0 bg-black/90 text-white p-3 font-mono text-[10px] max-h-48 overflow-y-auto border-t border-white/10 z-20">

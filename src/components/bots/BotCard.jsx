@@ -1,8 +1,20 @@
 import { motion } from "framer-motion";
-import { Play, Pause, Square, Settings, TrendingUp, TrendingDown, Hash } from "lucide-react";
+import { Play, Pause, Square, Settings, TrendingUp, TrendingDown, Hash, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { entities as appStorage } from "@/lib/storage";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 
 // Strategy descriptions for vivid context
 const STRATEGY_INFO = {
@@ -22,6 +34,16 @@ export default function BotCard({ bot, onEdit, index = 0 }) {
   const handleStatus = async (newStatus) => {
     await appStorage.TradingBot.update(bot.id, { status: newStatus });
     queryClient.invalidateQueries({ queryKey: ["tradingBots"] });
+  };
+
+  const handleDelete = async () => {
+    try {
+      await appStorage.TradingBot.delete(bot.id);
+      queryClient.invalidateQueries({ queryKey: ["tradingBots"] });
+      toast.success("Bot deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete bot");
+    }
   };
 
   const isActive = bot.status === "active";
@@ -62,9 +84,33 @@ export default function BotCard({ bot, onEdit, index = 0 }) {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{bot.asset}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-black/[0.03] border border-black/[0.05] text-slate-400 hover:text-foreground transition-all duration-300" onClick={() => onEdit(bot)}>
-            <Settings className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-black/[0.03] border border-black/[0.05] text-slate-400 hover:text-foreground transition-all duration-300" onClick={() => onEdit(bot)}>
+              <Settings className="h-3.5 w-3.5" />
+            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-black/[0.03] border border-black/[0.05] text-slate-400 hover:text-primary transition-all duration-300">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-card border-border">
+                <AlertDialogHeader className="">
+                  <AlertDialogTitle className="">Delete Bot?</AlertDialogTitle>
+                  <AlertDialogDescription className="">
+                    This will permanently delete "{bot.name}" and all its settings. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="">
+                  <AlertDialogCancel className="">Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-primary text-white hover:bg-primary/90">
+                    Delete Bot
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* Strategy info — vivid */}

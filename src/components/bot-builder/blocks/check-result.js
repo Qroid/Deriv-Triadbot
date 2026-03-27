@@ -24,3 +24,14 @@ Blockly.Blocks['check_result'] = {
     this.jsonInit(checkResult);
   }
 };
+
+// Support for DBot contract_check_result
+Blockly.Blocks['contract_check_result'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("Result is")
+        .appendField(new Blockly.FieldDropdown([["win", "win"], ["loss", "loss"]]), "CHECK_RESULT");
+    this.setOutput(true, "Boolean");
+    this.setColour(210);
+  }
+};

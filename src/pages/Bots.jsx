@@ -1,23 +1,56 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { entities as appStorage } from "@/lib/storage";
-import { Plus, Bot, Search } from "lucide-react";
+import { Plus, Bot, Search, FileUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BotCard from "../components/bots/BotCard";
 import BotFormDialog from "../components/bots/BotFormDialog";
 import { motion } from "framer-motion";
+import { analyzeBotXml } from "@/utils/bot-analyzer";
+import { toast } from "sonner";
 
 export default function Bots() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editBot, setEditBot] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
+  const queryClient = useQueryClient();
 
   const { data: bots = [] } = useQuery({
     queryKey: ["tradingBots"],
     queryFn: () => appStorage.TradingBot.list("-updated_date"),
   });
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const xmlString = await file.text();
+      const botData = analyzeBotXml(xmlString);
+      
+      await appStorage.TradingBot.create({
+        ...botData,
+        status: "stopped",
+        total_profit: 0,
+        total_trades: 0,
+        win_rate: 0
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["tradingBots"] });
+      toast.success("Bot imported and analyzed successfully!");
+    } catch (error) {
+      console.error("Failed to import bot:", error);
+      toast.error("Failed to analyze bot file. Make sure it's a valid Deriv bot XML.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const filteredBots = bots.filter(bot => {
     const matchesSearch = bot.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -42,10 +75,28 @@ export default function Bots() {
           <h1 className="text-2xl font-black text-foreground">My Bots</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Automated strategies on Deriv synthetic markets</p>
         </div>
-        <Button onClick={() => { setEditBot(null); setDialogOpen(true); }}
-          className="bg-primary text-white hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-1.5" /> New Bot
-        </Button>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            accept=".xml"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <Button 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="border-primary/20 text-primary hover:bg-primary/5"
+          >
+            {importing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileUp className="h-4 w-4 mr-1.5" />}
+            Import XML
+          </Button>
+          <Button onClick={() => { setEditBot(null); setDialogOpen(true); }}
+            className="bg-primary text-white hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-1.5" /> New Bot
+          </Button>
+        </div>
       </motion.div>
 
       {/* Filters */}
@@ -78,10 +129,21 @@ export default function Bots() {
             {search ? "Try a different search" : "Create your first Deriv synthetic market bot"}
           </p>
           {!search && (
-            <Button onClick={() => { setEditBot(null); setDialogOpen(true); }}
-              className="bg-primary text-white hover:bg-primary/90 mt-1">
-              <Plus className="h-4 w-4 mr-1.5" /> Create Bot
-            </Button>
+            <div className="flex gap-2 mt-1">
+              <Button 
+                variant="outline" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="border-primary/20 text-primary hover:bg-primary/5"
+              >
+                {importing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileUp className="h-4 w-4 mr-1.5" />}
+                Import XML
+              </Button>
+              <Button onClick={() => { setEditBot(null); setDialogOpen(true); }}
+                className="bg-primary text-white hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-1.5" /> Create Bot
+              </Button>
+            </div>
           )}
         </motion.div>
       ) : (

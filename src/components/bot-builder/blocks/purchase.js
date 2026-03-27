@@ -36,3 +36,30 @@ Blockly.Blocks['purchase'] = {
     this.jsonInit(purchase);
   }
 };
+
+// Support for DBot purchase block
+Blockly.Blocks['trade_again'] = {
+  init: function() {
+    this.appendDummyInput().appendField("Trade Again");
+    this.setPreviousStatement(true, null);
+    this.setColour(330);
+  }
+};
+
+Blockly.Blocks['before_purchase'] = {
+  init: function() {
+    this.appendDummyInput().appendField("Before Purchase");
+    this.appendStatementInput("BEFOREPURCHASE_STACK").setCheck(null);
+    this.setColour(160);
+    this.setTooltip("This block runs before each trade is placed.");
+  }
+};
+
+Blockly.Blocks['after_purchase'] = {
+  init: function() {
+    this.appendDummyInput().appendField("After Purchase");
+    this.appendStatementInput("AFTERPURCHASE_STACK").setCheck(null);
+    this.setColour(160);
+    this.setTooltip("This block runs after each trade is completed.");
+  }
+};
