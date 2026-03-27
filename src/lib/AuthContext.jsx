@@ -1,7 +1,16 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { APP_CONFIG } from './config';
 
-const AuthContext = createContext();
+const AuthContext = createContext({
+  user: null,
+  isAuthenticated: false,
+  isLoadingAuth: true,
+  accounts: [],
+  activeAccount: null,
+  logout: () => {},
+  loginWithDeriv: () => {},
+  switchAccount: () => {},
+});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -22,6 +31,7 @@ export const AuthProvider = ({ children }) => {
 
   const loginWithDeriv = () => {
     const url = `${APP_CONFIG.OAUTH_URL}?app_id=${APP_CONFIG.APP_ID}&l=en&brand=deriv`;
+    console.log('Redirecting to Deriv OAuth:', url);
     window.location.href = url;
   };
 
