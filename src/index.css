@@ -70,6 +70,11 @@
   .neon-glow-success {
     box-shadow: 0 4px 20px hsla(145, 55%, 45%, 0.1);
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }

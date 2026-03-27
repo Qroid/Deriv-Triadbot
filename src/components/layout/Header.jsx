@@ -46,10 +46,11 @@ export default function Header() {
           ) : (
             <Button 
               onClick={loginWithDeriv}
-              className="bg-white text-primary hover:bg-white/90 font-black uppercase text-[10px] tracking-widest rounded-xl px-6 h-10 shadow-lg"
+              className="bg-white text-primary hover:bg-white/90 font-black uppercase text-[9px] sm:text-[10px] tracking-widest rounded-xl px-3 sm:px-6 h-10 shadow-lg"
             >
-              <LogIn className="h-4 w-4 mr-2" />
-              Login with Deriv
+              <LogIn className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Login with Deriv</span>
+              <span className="xs:hidden">Login</span>
             </Button>
           )}
         </div>
