@@ -25,13 +25,6 @@ const CATEGORIES = {
   "Other": ALL_ASSETS.filter(a => a.includes("Step") || a.includes("Range")),
 };
 
-const STRATEGY_INFO = [
-  { name: "Digit Frequency Analysis", desc: "Tracks 0–9 digit distribution with confidence scoring", color: "text-primary" },
-  { name: "Trend & Bias Model", desc: "Aligns trades with 50-tick bullish/bearish trends", color: "text-success" },
-  { name: "Spike/Step Detection", desc: "Detects immediate Boom/Crash spikes and Step trends", color: "text-accent" },
-  { name: "Confidence Filter", desc: "Signals require >70% confidence to be actionable", color: "text-warning" },
-];
-
 export default function MarketAnalysis() {
   const [category, setCategory] = useState("All");
   const [signalFilter, setSignalFilter] = useState("all");
@@ -86,7 +79,7 @@ export default function MarketAnalysis() {
               <h1 className="text-2xl font-black text-foreground">Market Scanner</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Deriv synthetic markets · Digit Frequency · Autoscan · Boom/Crash Spike · Tick Bias
+              Deriv synthetic markets · Automated Market Scanner · Real-time Tick Analysis
             </p>
           </div>
 
@@ -124,10 +117,10 @@ export default function MarketAnalysis() {
         </div>
       </motion.div>
 
-      {/* Strategy Legend */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {/* Top Controls */}
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Rapid Fire Configuration */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="lg:col-span-1 rounded-2xl border border-primary/30 bg-primary/[0.04] p-4 flex flex-col justify-between space-y-4 shadow-sm">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 max-w-md rounded-2xl border border-primary/30 bg-primary/[0.04] p-4 flex flex-col justify-between space-y-4 shadow-sm">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30">
               <Zap className="h-4 w-4 text-primary" />
@@ -170,19 +163,6 @@ export default function MarketAnalysis() {
             )}
           </div>
         </motion.div>
-
-        {/* Strategies (now 3 cols) */}
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-          {STRATEGY_INFO.slice(0, 3).map((strat) => (
-            <div key={strat.name} className="flex items-start gap-3 bg-white/80 rounded-2xl p-4 border border-black/[0.05] group hover:border-black/[0.1] transition-all duration-300 shadow-sm hover:shadow-md">
-              <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${strat.color.replace("text-", "bg-")} shadow-sm`} />
-              <div>
-                <p className={`text-[11px] font-black uppercase tracking-[0.1em] ${strat.color}`}>{strat.name}</p>
-                <p className="text-[10px] text-slate-500 leading-relaxed font-medium mt-1">{strat.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Filters */}
