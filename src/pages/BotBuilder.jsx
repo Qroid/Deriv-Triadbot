@@ -18,13 +18,25 @@ export default function BotBuilder() {
         toolbox: Toolbox,
         grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
         trashcan: true,
-        zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
+        zoom: { controls: true, wheel: true, startScale: 0.8, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
       });
+
+      // Handle Resize
+      const resizeObserver = new ResizeObserver(() => {
+        if (workspaceRef.current) {
+          Blockly.svgResize(workspaceRef.current);
+        }
+      });
+      resizeObserver.observe(blocklyDiv.current);
 
       workspaceRef.current.addChangeListener(() => {
         const newXml = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspaceRef.current));
         setXml(newXml);
       });
+
+      return () => {
+        resizeObserver.disconnect();
+      };
     }
 
     return () => {
@@ -73,7 +85,7 @@ export default function BotBuilder() {
   };
 
   return (
-    <div className="h-[calc(100vh-64px-80px)] lg:h-[calc(100vh-64px)] w-full flex flex-col bg-background overflow-hidden">
+    <div className="h-[calc(100vh-4rem-100px)] lg:h-[calc(100vh-4rem)] w-full flex flex-col bg-background overflow-hidden">
       <div className="p-2 border-b flex items-center gap-2 bg-card shadow-sm z-10 shrink-0">
         <Button size="sm" onClick={() => fileInputRef.current.click()}>Load Bot</Button>
         <Button size="sm" variant="success" onClick={() => run(workspaceRef.current)} disabled={isRunning}>

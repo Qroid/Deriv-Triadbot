@@ -9,8 +9,8 @@ export default function Header() {
   const { isAuthenticated, loginWithDeriv } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-primary border-b border-white/10 shadow-lg">
-      <div className="flex items-center h-16 px-4 lg:px-6 gap-4">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-primary border-b border-white/10 shadow-lg h-16">
+      <div className="flex items-center h-full px-4 lg:px-6 gap-4">
         {/* Deriv-style logo */}
         <Link to="/" className="flex items-center gap-3 shrink-0 group">
           <div className="h-10 w-12 rounded-2xl bg-white flex items-center justify-center shadow-md transition-transform duration-500 group-hover:rotate-[360deg]">

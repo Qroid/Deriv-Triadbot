@@ -27,6 +27,9 @@ export default function MobileNav() {
   return (
     <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-[9999] h-[72px] safe-area-bottom">
       <div className="relative w-full h-full">
+        {/* Background plate to prevent content peeking below the bar */}
+        <div className="absolute inset-x-0 bottom-[-16px] h-16 bg-background lg:hidden -z-10" />
+        
         {/* SVG Background with Liquid Curve Cutout */}
         <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-[0_-8px_20px_rgba(0,0,0,0.1)]">
           <svg width="100%" height="72" viewBox="0 0 100 72" preserveAspectRatio="none" className="overflow-visible">
