@@ -4,63 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Key, Bell, Shield, Save, Loader2, CheckCircle2, ExternalLink, LogOut } from "lucide-react";
+import { Key, Bell, Shield, Save, Loader2, CheckCircle2, ExternalLink, LogOut, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Settings() {
+  const { isAuthenticated, logout, loginWithDeriv, user } = useAuth();
   const [settings, setSettings] = useState({
-    api_token: "",
     demo_mode: true,
     sound_alerts: false,
     notify_wins: true,
     notify_losses: true,
   });
   const [saving, setSaving] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [accountInfo, setAccountInfo] = useState(null);
-  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     const loadSettings = () => {
       const savedSettings = localAuth.getAccount();
       if (savedSettings) setSettings(prev => ({ ...prev, ...savedSettings }));
-      const savedToken = localStorage.getItem("deriv_token");
-      if (savedToken) setSettings(prev => ({ ...prev, api_token: savedToken }));
     };
     loadSettings();
   }, []);
-
-  const testConnection = () => {
-    if (!settings.api_token) return;
-    setTesting(true);
-    const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=100634");
-    ws.onopen = () => ws.send(JSON.stringify({ authorize: settings.api_token }));
-    ws.onmessage = (evt) => {
-      const msg = JSON.parse(evt.data);
-      if (msg.msg_type === "authorize" && !msg.error) {
-        setConnected(true);
-        setAccountInfo({ loginid: msg.authorize.loginid, currency: msg.authorize.currency, balance: msg.authorize.balance });
-        localStorage.setItem("deriv_token", settings.api_token);
-        toast.success("Connected to Deriv successfully");
-      } else if (msg.error) {
-        setConnected(false);
-        setAccountInfo(null);
-        toast.error("Invalid token: " + msg.error.message);
-      }
-      setTesting(false);
-      ws.close();
-    };
-    ws.onerror = () => { setTesting(false); toast.error("Connection failed"); ws.close(); };
-  };
-
-  const disconnect = () => {
-    localStorage.removeItem("deriv_token");
-    setConnected(false);
-    setAccountInfo(null);
-    setSettings(prev => ({ ...prev, api_token: "" }));
-    toast.success("Disconnected");
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -76,7 +41,7 @@ export default function Settings() {
         <h1 className="text-2xl font-black text-foreground">Settings</h1>
       </motion.div>
 
-      {/* API Connection */}
+      {/* Account Connection */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="rounded-2xl border border-border/60 bg-card p-5 space-y-4">
         <div className="flex items-center gap-3">
@@ -84,47 +49,44 @@ export default function Settings() {
             <Key className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <p className="font-bold text-sm text-foreground">Deriv API Connection</p>
-            <p className="text-[11px] text-muted-foreground">Required only for live trading — not needed to browse</p>
+            <p className="font-bold text-sm text-foreground">Deriv Account</p>
+            <p className="text-[11px] text-muted-foreground">Manage your connection to the Deriv platform</p>
           </div>
         </div>
 
-        {accountInfo ? (
-          <div className="rounded-xl bg-success/8 border border-success/20 p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-success" />
-              <div>
-                <p className="text-xs font-bold text-success">Connected — {accountInfo.loginid}</p>
-                <p className="text-[10px] text-muted-foreground">Balance: {accountInfo.balance} {accountInfo.currency}</p>
+        {isAuthenticated ? (
+          <div className="rounded-xl bg-success/8 border border-success/20 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <div>
+                  <p className="text-xs font-black text-success uppercase tracking-widest">Linked Account</p>
+                  <p className="text-lg font-black text-foreground">{user?.id}</p>
+                </div>
               </div>
+              <Button variant="ghost" size="sm" onClick={logout} className="text-[10px] text-primary font-black uppercase tracking-widest hover:bg-primary/5">
+                <LogOut className="h-3.5 w-3.5 mr-1.5" /> Disconnect
+              </Button>
             </div>
-            <button onClick={disconnect} className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:underline">
-              <LogOut className="h-3 w-3" /> Disconnect
-            </button>
+            <div className="pt-2 border-t border-success/10 flex gap-6">
+               <div>
+                 <p className="text-[9px] text-muted-foreground uppercase font-bold">Balance</p>
+                 <p className="text-sm font-black">{user?.currency} {user?.balance}</p>
+               </div>
+               <div>
+                 <p className="text-[9px] text-muted-foreground uppercase font-bold">Markup Earned</p>
+                 <p className="text-sm font-black text-primary">$0.00</p>
+               </div>
+            </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div>
-              <Label className="text-[11px] text-muted-foreground">API Token</Label>
-              <Input
-                type="password"
-                value={settings.api_token}
-                onChange={(e) => setSettings({ ...settings, api_token: e.target.value })}
-                placeholder="Paste your Deriv API token here"
-                className="bg-secondary border-border mt-1 font-mono text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
-                Get your token at
-                <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noreferrer"
-                  className="text-primary hover:underline flex items-center gap-0.5">
-                  app.deriv.com/account/api-token <ExternalLink className="h-2.5 w-2.5" />
-                </a>
-              </p>
-            </div>
-            <Button onClick={testConnection} disabled={!settings.api_token || testing}
-              className="bg-primary text-white hover:bg-primary/90 w-full">
-              {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Key className="h-4 w-4 mr-2" />}
-              {testing ? "Connecting..." : "Connect to Deriv"}
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Connect your account using OAuth 2.0 to trade live and earn commissions. This is a secure, official Deriv login.
+            </p>
+            <Button onClick={loginWithDeriv} className="bg-primary text-white hover:bg-primary/90 w-full h-12 rounded-xl font-black uppercase tracking-widest text-xs">
+              <LogIn className="h-4 w-4 mr-2" />
+              Secure Login with Deriv
             </Button>
           </div>
         )}

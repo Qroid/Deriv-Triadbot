@@ -63,14 +63,14 @@ export default function MarketAnalysis() {
 
   const handleTrade = (asset, signal) => {
     const symbol = SYMBOL_MAP[asset];
-    const barrier = signal.barrier || (signal.type.includes("OVER") ? 1 : 8);
-    const type = signal.type.includes("OVER") ? "OVER" : "UNDER";
+    const barrier = signal.barrier;
+    const type = signal.contract;
     
     toast.info(`Initiating Rapid Fire on ${asset}`, {
       description: `Firing ${rfTrades} trades at $${rfStake} stake...`,
     });
 
-    initiateSequentialRapidFire(rfTrades, rfStake, type, barrier, symbol);
+    initiateSequentialRapidFire(rfTrades, rfStake, type, barrier, symbol, signal.confidence);
   };
 
   return (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { APP_CONFIG } from '../lib/config';
 
 export function useDerivAccount() {
   const [account, setAccount] = useState({
@@ -13,7 +14,7 @@ export function useDerivAccount() {
     const token = localStorage.getItem('deriv_token');
     if (!token) return;
 
-    const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=100634');
+    const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { APP_CONFIG } from '../lib/config';
 
 /**
  * useDerivTrading - Ported Sequential Rapid Fire & Trade Execution
@@ -9,8 +10,6 @@ import { toast } from 'sonner';
  * 2. Proposal-to-Buy flow (request -> cache -> purchase)
  * 3. Session Statistics (win/loss/profit)
  */
-
-const AFFILIATE_TOKEN = '3FAF9FB6-DA58-4558-964B-6F0DF4606B4C';
 
 export function useDerivTrading() {
   const [sessionStats, setSessionStats] = useState({
@@ -36,7 +35,7 @@ export function useDerivTrading() {
     const token = localStorage.getItem('deriv_token');
     if (!token) return;
 
-    const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=100634');
+    const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -67,7 +66,7 @@ export function useDerivTrading() {
         ws.send(JSON.stringify({
           buy: data.proposal.id,
           price: data.proposal.ask_price,
-          passthrough: { request_id: requestId, affiliate_token: AFFILIATE_TOKEN }
+          passthrough: { request_id: requestId }
         }));
       }
 
@@ -123,10 +122,16 @@ export function useDerivTrading() {
     if (trade.type === 'RISE') contractType = 'CALL';
     if (trade.type === 'FALL') contractType = 'PUT';
     if (trade.type === 'DIFFERS') contractType = 'DIGITDIFF';
+    if (trade.type === 'MATCHES') contractType = 'DIGITMATCH';
+
+    // Dynamic Stake & Martingale logic based on confidence
+    const confidence = trade.confidence || 0;
+    let amount = trade.amount;
+    let multiplier = confidence >= 70 ? 2 : 1.5;
 
     wsRef.current.send(JSON.stringify({
       proposal: 1,
-      amount: trade.amount,
+      amount: amount,
       basis: 'stake',
       contract_type: contractType,
       currency: 'USD',
@@ -134,14 +139,19 @@ export function useDerivTrading() {
       duration_unit: 't',
       symbol: trade.symbol,
       barrier: trade.barrier,
-      passthrough: { request_id: requestId }
+      markup: APP_CONFIG.MARKUP_PERCENTAGE,
+      passthrough: { 
+        request_id: requestId,
+        confidence: confidence,
+        multiplier: multiplier
+      }
     }));
   }, []);
 
-  const initiateSequentialRapidFire = useCallback((trades, amount, type, barrier, symbol) => {
+  const initiateSequentialRapidFire = useCallback((trades, amount, type, barrier, symbol, confidence) => {
     const queue = [];
     for (let i = 0; i < trades; i++) {
-      queue.push({ amount, type, barrier, symbol });
+      queue.push({ amount, type, barrier, symbol, confidence });
     }
     rapidFireQueueRef.current = queue;
     setIsRapidFireActive(true);

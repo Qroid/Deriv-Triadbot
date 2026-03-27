@@ -7,11 +7,10 @@
  *  - Odd/Even percentage tracking
  *  - Consecutive digit tracking for autoscan
  *  - Autoscan strategy: find 0,1 or 8,9 as least-freq pair → OVER 1 / UNDER 8
- *
- * Falls back to GBM simulation when no API token is stored.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { APP_CONFIG } from "../lib/config";
 
 // ─── Symbol Map ───────────────────────────────────────────────────────────────
 export const SYMBOL_MAP = {
@@ -20,6 +19,11 @@ export const SYMBOL_MAP = {
   "Volatility 50 Index":    "R_50",
   "Volatility 75 Index":    "R_75",
   "Volatility 100 Index":   "R_100",
+  "Volatility 10 (1s) Index": "1HZ10V",
+  "Volatility 25 (1s) Index": "1HZ25V",
+  "Volatility 50 (1s) Index": "1HZ50V",
+  "Volatility 75 (1s) Index": "1HZ75V",
+  "Volatility 100 (1s) Index": "1HZ100V",
   "Boom 1000 Index":        "BOOM1000",
   "Boom 500 Index":         "BOOM500",
   "Crash 1000 Index":       "CRASH1000",
@@ -50,11 +54,6 @@ export function getLastDigit(priceStr, symbol) {
 // ─── Digit Analysis ───────────────────────────────────────────────────────────
 /**
  * Returns color tier for a digit given sorted unique counts.
- * green   = least frequent   → trade signal candidate
- * yellow  = 2nd least frequent
- * orange  = 2nd most frequent
- * red     = most frequent
- * default = all others
  */
 export function getDigitColorTier(count, uniqueCounts) {
   if (uniqueCounts.length === 0 || count === 0) return "default";
@@ -87,6 +86,107 @@ export function calculateTrend(ticks, windowSize = 1000) {
   return "NEUTRAL";
 }
 
+/**
+ * Advanced Matches/Differs Analyzer
+ * Implements Streak, Cyclic, and Sequence Analysis
+ */
+export function analyzeMatchesDiffers(ticks, asset) {
+  if (ticks.length < 50) return { type: "COLLECTING", confidence: 0 };
+
+  const symbol = SYMBOL_MAP[asset];
+  const lastDigits = ticks.slice(-100).map(t => getLastDigit(t, symbol));
+  const lastDigit = lastDigits[lastDigits.length - 1];
+  const prevDigit = lastDigits[lastDigits.length - 2];
+
+  // 1. Streak Analysis
+  let mdStreaks = []; // Array of booleans: true for Match, false for Differ
+  for (let i = 1; i < lastDigits.length; i++) {
+    mdStreaks.push(lastDigits[i] === lastDigits[i - 1]);
+  }
+
+  const currentMatchStreak = (() => {
+    let count = 0;
+    for (let i = mdStreaks.length - 1; i >= 0; i--) {
+      if (mdStreaks[i]) count++; else break;
+    }
+    return count;
+  })();
+
+  const currentDifferStreak = (() => {
+    let count = 0;
+    for (let i = mdStreaks.length - 1; i >= 0; i--) {
+      if (!mdStreaks[i]) count++; else break;
+    }
+    return count;
+  })();
+
+  // 2. Frequency Analysis (Large Sample)
+  const totalTrades = mdStreaks.length;
+  const matchCount = mdStreaks.filter(s => s).length;
+  const differCount = totalTrades - matchCount;
+  const matchPct = (matchCount / totalTrades) * 100;
+  const differPct = (differCount / totalTrades) * 100;
+
+  // 3. Cyclic Pattern Detection (Repeating M/D patterns)
+  // Look for repeating sequences like [D, D, M, D, D, M]
+  const recentPattern = mdStreaks.slice(-6).map(s => s ? 'M' : 'D').join('');
+  const cyclicPatterns = {
+    "DDMDDM": "MATCHES",
+    "MMDMMD": "DIFFERS",
+    "DDDDDM": "MATCHES",
+    "MMMMMD": "DIFFERS",
+  };
+  const predictedByCycle = cyclicPatterns[recentPattern];
+
+  // 4. Signal Calculation
+  let signal = { type: "NEUTRAL", confidence: 0, reason: "", contract: "", dir: "", barrier: lastDigit };
+
+  // MATCHES Logic
+  if (currentMatchStreak >= 3 || matchPct > 65 || predictedByCycle === "MATCHES") {
+    let confidence = 50;
+    if (currentMatchStreak >= 3) confidence += 20;
+    if (matchPct > 65) confidence += 15;
+    if (predictedByCycle === "MATCHES") confidence += 15;
+
+    signal = {
+      type: "MATCH SIGNAL",
+      dir: "RISE",
+      contract: "MATCHES",
+      barrier: lastDigit,
+      confidence: Math.min(confidence, 100),
+      reason: currentMatchStreak >= 3 ? `${currentMatchStreak}+ consecutive matches! Streak momentum.` : 
+              matchPct > 65 ? `High frequency match pattern (${matchPct.toFixed(1)}%).` : 
+              "Cyclic pattern suggests Match next.",
+      exitWarning: [8, 9].includes(lastDigit) ? "Pattern weakening near edge digits." : null
+    };
+  }
+  // DIFFERS Logic (Prioritize high confidence Differs)
+  else if (currentDifferStreak >= 3 || differPct > 65 || predictedByCycle === "DIFFERS") {
+    let confidence = 60;
+    if (currentDifferStreak >= 3) confidence += 15;
+    if (differPct > 65) confidence += 10;
+    if (predictedByCycle === "DIFFERS") confidence += 15;
+
+    // Warning: Don't differ if we just saw a digit that breaks patterns
+    const isExitDigit = [0, 9].includes(lastDigit); // Examples of warning digits
+    if (isExitDigit) confidence -= 20;
+
+    signal = {
+      type: "DIFFERS SIGNAL",
+      dir: "FALL",
+      contract: "DIFFERS",
+      barrier: lastDigit === 0 ? 1 : 0, // Predict it won't be 0 (or 1 if current is 0)
+      confidence: Math.min(confidence, 100),
+      reason: currentDifferStreak >= 3 ? `${currentDifferStreak}+ consecutive differs! Strong stability.` : 
+              differPct > 65 ? `Stable differ environment (${differPct.toFixed(1)}%).` : 
+              "Cyclic pattern suggests Differ next.",
+      exitWarning: isExitDigit ? "Warning: Pattern break digit detected." : null
+    };
+  }
+
+  return signal;
+}
+
 export function detectSpike(ticks, asset) {
   if (ticks.length < 5) return null;
   const last = parseFloat(ticks[ticks.length - 1]);
@@ -95,47 +195,17 @@ export function detectSpike(ticks, asset) {
 
   if (asset.includes("Boom") && diff > 0.2) return "SPIKE_UP";
   if (asset.includes("Crash") && diff < -0.2) return "SPIKE_DOWN";
-  if (asset.includes("Step")) {
-    const consecutive = ticks.slice(-10).map((t, i, arr) => {
-      if (i === 0) return true;
-      const d = parseFloat(t) - parseFloat(arr[i-1]);
-      return d > 0;
-    });
-    const ups = consecutive.filter(u => u).length;
-    if (ups >= 8) return "STEP_UP";
-    if (ups <= 2) return "STEP_DOWN";
-  }
   return null;
 }
 
 /**
- * Enhanced Autoscan strategy with Confidence Score.
- * Returns a detailed signal object.
+ * Main Market Analysis Orchestrator
  */
 export function runAutoscan(digitCounts, consecutiveDigits, ticks, asset) {
-  const sorted = Object.entries(digitCounts)
-    .map(([d, c]) => ({ digit: parseInt(d), count: c }))
-    .sort((a, b) => a.count - b.count);
-
-  const least = sorted[0].digit;
-  const almostLeast = sorted[1].digit;
-  const pair = [least, almostLeast].sort((a, b) => a - b).join("");
-  
-  // Calculate frequency gap (how much less frequent are they?)
-  const avgCount = Object.values(digitCounts).reduce((a, b) => a + b, 0) / 10;
-  const gap = (avgCount - sorted[0].count) / avgCount;
-  
-  let confidence = Math.min(Math.round(gap * 200), 100); // 0-100 score
-  let tradeType = null;
-  let barrier = null;
-
-  if (pair === "01") { tradeType = "OVER"; barrier = 1; }
-  else if (pair === "89") { tradeType = "UNDER"; barrier = 8; }
-  
   const trend = calculateTrend(ticks);
   const spike = detectSpike(ticks, asset);
-
-  // High priority for Spikes on Boom/Crash
+  
+  // 1. Spike Priority
   if (spike) {
     const isUp = spike === "SPIKE_UP";
     return {
@@ -145,95 +215,22 @@ export function runAutoscan(digitCounts, consecutiveDigits, ticks, asset) {
       confidence: 100,
       trend,
       spike,
-      reason: `Detected immediate ${spike.replace("_", " ")} on ${asset}. Catch the momentum!`,
-      pair: null
+      reason: `Immediate ${spike.replace("_", " ")} momentum!`,
     };
   }
 
-  if (tradeType === "OVER" && trend === "BULLISH") confidence += 15;
-  if (tradeType === "UNDER" && trend === "BEARISH") confidence += 15;
-  
-  // ─── Rise/Fall & Matches/Differs Logic ──────────────────────────────────────
-  const lastPrice = parseFloat(ticks[ticks.length - 1]);
-  const prevPrice = parseFloat(ticks[ticks.length - 2]);
-  
-  // Rise/Fall signals based on momentum
-  if (trend === "BULLISH" && lastPrice > prevPrice) {
-    return {
-      type: "RISE SIGNAL",
-      dir: "RISE",
-      contract: "RISE",
-      confidence: Math.min(confidence + 20, 100),
-      reason: "Strong bullish momentum detected over 1000 ticks. Trend is your friend!",
-      trend
-    };
-  } else if (trend === "BEARISH" && lastPrice < prevPrice) {
-    return {
-      type: "FALL SIGNAL",
-      dir: "FALL",
-      contract: "FALL",
-      confidence: Math.min(confidence + 20, 100),
-      reason: "Strong bearish momentum detected over 1000 ticks. Trend is your friend!",
-      trend
-    };
+  // 2. Matches/Differs Logic (New core strategy)
+  const mdSignal = analyzeMatchesDiffers(ticks, asset);
+  if (mdSignal.confidence >= 70) {
+    return { ...mdSignal, trend };
   }
 
-  // Matches/Differs based on Digit Avoidance
-  // If a digit hasn't appeared in the last 50 ticks, it's a candidate for Matches (reversion) or Differs (momentum)
-  const last50 = ticks.slice(-50).map(t => getLastDigit(t, SYMBOL_MAP[asset]));
-  const missingDigit = [0,1,2,3,4,5,6,7,8,9].find(d => !last50.includes(d));
-  if (missingDigit !== undefined) {
-    return {
-      type: "DIFFERS SIGNAL",
-      dir: "DIFFERS",
-      contract: `DIFFERS ${missingDigit}`,
-      barrier: missingDigit,
-      confidence: 95,
-      reason: `Digit ${missingDigit} hasn't appeared in 50 ticks. Extremely high probability for 'Differs'.`,
-      trend
-    };
-  }
-
-  if (spike) confidence += 30; // Spikes are high-conviction events
-
-  confidence = Math.min(confidence, 100);
-
-  if (!tradeType) {
-    return { 
-      type: "NEUTRAL", 
-      reason: `Least pair: ${least},${almostLeast} — no setup`, 
-      confidence: 0,
-      trend,
-      pair 
-    };
-  }
-
-  const isConsecutive = consecutiveDigits.length >= 2 && 
-    [consecutiveDigits[consecutiveDigits.length - 2], consecutiveDigits[consecutiveDigits.length - 1]]
-    .sort((a, b) => a - b).join("") === pair;
-
-  if (isConsecutive) {
-    const isOver = tradeType === "OVER";
-    return {
-      type: isOver ? "OVER SIGNAL" : "UNDER SIGNAL",
-      dir: isOver ? "RISE" : "FALL",
-      contract: isOver ? "DIGIT OVER 1" : "DIGIT UNDER 8",
-      barrier,
-      tradeType,
-      confidence,
-      trend,
-      spike,
-      reason: `Digit Pattern: ${pair} is the least frequent pair AND appeared consecutively. High probability for ${isOver ? "Over 1" : "Under 8"}.`,
-      pair,
-    };
-  }
-
-  return {
-    type: "NEUTRAL",
-    reason: `Potential ${tradeType} setup with ${pair} (${confidence}% confidence). Waiting for consecutive appearance.`,
-    confidence: Math.round(confidence / 2),
-    trend,
-    pair,
+  // 3. Fallback to Neutral
+  return { 
+    type: "NEUTRAL", 
+    reason: "Scanning for cyclic M/D patterns or streaks...", 
+    confidence: 0,
+    trend 
   };
 }
 
@@ -268,10 +265,9 @@ const TICK_LIMIT = 1000;
 export function useDerivTicks(assets) {
   const [data, setData] = useState(() => buildInitialState(assets));
   const wsRef = useRef(null);
-  const stateRef = useRef({}); // Mutable per-asset state (ticks, counts)
+  const stateRef = useRef({}); 
   const isLiveRef = useRef(false);
 
-  // Initialize mutable state
   useEffect(() => {
     assets.forEach(asset => {
       stateRef.current[asset] = { 
@@ -286,11 +282,9 @@ export function useDerivTicks(assets) {
 
   const processTick = useCallback((asset, priceStr) => {
     const symbol = SYMBOL_MAP[asset];
-    const decimals = getDecimalPlaces(symbol);
     const s = stateRef.current[asset];
     if (!s) return;
 
-    // Update ticks (cap at TICK_LIMIT)
     s.ticks.push(priceStr);
     if (s.ticks.length > TICK_LIMIT) {
       const removed = s.ticks.shift();
@@ -306,7 +300,6 @@ export function useDerivTicks(assets) {
     if (d !== null) {
       s.digitCounts[d]++;
       if (d % 2 === 0) s.totalEven++; else s.totalOdd++;
-      // Consecutive digit tracking (exact port from original bot)
       if (s.consecutiveDigits.length === 0 || s.consecutiveDigits[s.consecutiveDigits.length - 1] !== d) {
         s.consecutiveDigits.push(d);
       }
@@ -336,41 +329,27 @@ export function useDerivTicks(assets) {
     }));
   }, []);
 
-  // ── Try real Deriv WS ──
   useEffect(() => {
     const token = localStorage.getItem("deriv_token");
-
     if (token) {
-      // Real WS connection
-      const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=100634");
+      const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);
       wsRef.current = ws;
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ authorize: token }));
-      };
-
+      ws.onopen = () => ws.send(JSON.stringify({ authorize: token }));
       ws.onmessage = (evt) => {
         const msg = JSON.parse(evt.data);
-
         if (msg.msg_type === "authorize" && !msg.error) {
           isLiveRef.current = true;
-          // Request history + subscribe for each asset
           assets.forEach(asset => {
             const symbol = SYMBOL_MAP[asset];
-            ws.send(JSON.stringify({
-              ticks_history: symbol, end: "latest", count: 1000, style: "ticks"
-            }));
+            ws.send(JSON.stringify({ ticks_history: symbol, end: "latest", count: 1000, style: "ticks" }));
           });
         }
-
         if (msg.msg_type === "history" && msg.history?.prices) {
-          // Find which asset this history belongs to
           const symbol = msg.echo_req?.ticks_history;
           const asset = assets.find(a => SYMBOL_MAP[a] === symbol);
           if (!asset) return;
           const s = stateRef.current[asset];
           if (!s) return;
-          // Seed with real history
           s.ticks = msg.history.prices.map(p => String(p));
           s.digitCounts.fill(0);
           s.totalEven = 0; s.totalOdd = 0;
@@ -386,19 +365,14 @@ export function useDerivTicks(assets) {
               }
             }
           });
-          // Subscribe to live ticks
           ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
         }
-
         if (msg.msg_type === "tick" && msg.tick) {
-          const symbol = msg.tick.symbol;
-          const asset = assets.find(a => SYMBOL_MAP[a] === symbol);
+          const asset = assets.find(a => SYMBOL_MAP[a] === msg.tick.symbol);
           if (asset) processTick(asset, String(msg.tick.quote));
         }
       };
-
       ws.onclose = () => { isLiveRef.current = false; };
-
       return () => { ws.close(); };
     }
   }, [assets, processTick]);

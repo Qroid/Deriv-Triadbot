@@ -3,6 +3,7 @@
  * Token is stored in localStorage. No forced login — only needed for live trading.
  */
 import { useState, useCallback } from "react";
+import { APP_CONFIG } from "../lib/config";
 
 const TOKEN_KEY = "deriv_token";
 
@@ -22,7 +23,7 @@ export function useDerivAuth() {
     setIsConnected(false);
     setAccountInfo(null);
 
-    const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=100634");
+    const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);
     ws.onopen = () => ws.send(JSON.stringify({ authorize: t }));
     ws.onmessage = (evt) => {
       const msg = JSON.parse(evt.data);
