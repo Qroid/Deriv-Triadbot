@@ -10,6 +10,12 @@ export const analyzeBotXml = (xmlString) => {
     indicators: [],
     logicComplexity: "Low",
     warnings: [],
+    impactAssessment: {
+      logic: { status: "preserved", detail: "Core logic intact." },
+      money: { status: "preserved", detail: "Money management fully mapped." },
+      indicators: { status: "preserved", detail: "Technical analysis preserved." }
+    },
+    compatibilityScore: 100,
   };
 
   // Helper to get field value by name
@@ -18,25 +24,17 @@ export const analyzeBotXml = (xmlString) => {
     return field ? field.textContent : null;
   };
 
-  // 1. Identify Asset (Symbol)
+  // 1. Identify Asset
   const symbol = getFieldValue("SYMBOL_LIST") || getFieldValue("SYMBOL") || "R_10";
   const assetMap = {
-    "R_10": "Volatility 10 Index",
-    "R_25": "Volatility 25 Index",
-    "R_50": "Volatility 50 Index",
-    "R_75": "Volatility 75 Index",
-    "R_100": "Volatility 100 Index",
-    "B1000": "Boom 1000 Index",
-    "B500": "Boom 500 Index",
-    "C1000": "Crash 1000 Index",
-    "C500": "Crash 500 Index",
-    "STPR": "Step Index",
-    "RB100": "Range Break 100 Index",
-    "RB200": "Range Break 200 Index",
+    "R_10": "Volatility 10 Index", "R_25": "Volatility 25 Index", "R_50": "Volatility 50 Index",
+    "R_75": "Volatility 75 Index", "R_100": "Volatility 100 Index", "B1000": "Boom 1000 Index",
+    "B500": "Boom 500 Index", "C1000": "Crash 1000 Index", "C500": "Crash 500 Index",
+    "STPR": "Step Index", "RB100": "Range Break 100 Index", "RB200": "Range Break 200 Index",
   };
   analysis.detected.asset = assetMap[symbol] || "Volatility 10 Index";
 
-  // 2. Identify Strategy
+  // 2. Identify Strategy & Money Management Impact
   let strategy = "Fixed Stake";
   const xmlLower = xmlString.toLowerCase();
   if (xmlLower.includes("martingale")) strategy = "Martingale";
@@ -44,17 +42,13 @@ export const analyzeBotXml = (xmlString) => {
   else if (xmlLower.includes("fibonacci")) strategy = "Fibonacci";
   else if (xmlLower.includes("oscar") || xmlLower.includes("grind")) strategy = "Oscar's Grind";
   else if (xmlLower.includes("percentage")) strategy = "Percentage Stake";
+  
   analysis.detected.strategy = strategy;
 
-  // 3. Identify Indicators
+  // 3. Identify Indicators & Technical Impact
   const indicatorBlocks = {
-    "sma": "Simple Moving Average (SMA)",
-    "ema": "Exponential Moving Average (EMA)",
-    "rsi": "Relative Strength Index (RSI)",
-    "bb": "Bollinger Bands",
-    "macd": "MACD",
-    "stoch": "Stochastic",
-    "cci": "CCI",
+    "sma": "SMA", "ema": "EMA", "rsi": "RSI", "bb": "Bollinger Bands",
+    "macd": "MACD", "stoch": "Stochastic", "cci": "CCI",
   };
 
   blocks.forEach(block => {
@@ -66,18 +60,15 @@ export const analyzeBotXml = (xmlString) => {
     }
   });
 
-  // 4. Identify Contract Type
-  const tradeType = getFieldValue("TRADETYPE_LIST") || "risefall";
-  const contractTypeMap = {
-    "risefall": "Rise/Fall",
-    "evenodd": "Even/Odd",
-    "matchdiff": "Matches/Differs",
-    "overunder": "Over/Under",
-    "highlow": "Higher/Lower",
-  };
-  analysis.detected.contract_type = contractTypeMap[tradeType] || "Rise/Fall";
+  if (analysis.indicators.length > 0) {
+    analysis.impactAssessment.indicators = {
+      status: "partial",
+      detail: `${analysis.indicators.join(", ")} logic will be simplified to core signals.`
+    };
+    analysis.compatibilityScore -= 15;
+  }
 
-  // 5. Identify Parameters
+  // 4. Identify Parameters
   const amountBlock = xmlDoc.querySelector('value[name="AMOUNT"] shadow field') || 
                       xmlDoc.querySelector('field[name="AMOUNT"]');
   analysis.detected.initial_stake = amountBlock ? parseFloat(amountBlock.textContent) : 0.35;
@@ -92,50 +83,44 @@ export const analyzeBotXml = (xmlString) => {
                           xmlDoc.querySelector('field[name="EVENODD_LIST"]') ||
                           xmlDoc.querySelector('field[name="OVERUNDER_LIST"]');
   let prediction = predictionBlock ? predictionBlock.textContent : "Rise";
-  
-  if (prediction === "even") prediction = "Even";
-  if (prediction === "odd") prediction = "Odd";
-  if (prediction === "matches") prediction = "Matches";
-  if (prediction === "differs") prediction = "Differs";
-  if (prediction === "over") prediction = "Over";
-  if (prediction === "under") prediction = "Under";
-  if (prediction === "rise") prediction = "Rise";
-  if (prediction === "fall") prediction = "Fall";
   analysis.detected.prediction = prediction;
 
-  // 6. Identify Ignored Blocks (Experimental)
+  // 5. Logic Complexity & Impact Analysis
   const supportedBlocks = [
-    "trade_definition", "trade_definition_market", "trade_definition_tradeoptions",
-    "trade_definition_auth", "trade_definition_status", "before_purchase",
-    "purchase", "after_purchase", "check_result", "main_stake", "main_duration",
-    "main_prediction", "math_number", "logic_compare", "logic_operation", "variables_get"
+    "trade_definition", "before_purchase", "purchase", "after_purchase", 
+    "check_result", "main_stake", "variables_get", "math_number"
   ];
 
-  const uniqueIgnoredTypes = new Set();
+  const criticalIgnored = new Set();
   blocks.forEach(block => {
     const type = block.getAttribute("type");
     if (type && !supportedBlocks.some(s => type.includes(s))) {
-      uniqueIgnoredTypes.add(type);
+      if (type.includes("controls_if") || type.includes("logic_") || type.includes("procedures_")) {
+        criticalIgnored.add(type);
+      }
+      if (!analysis.ignored.includes(type)) analysis.ignored.push(type);
     }
   });
-  analysis.ignored = Array.from(uniqueIgnoredTypes).slice(0, 10); // Limit to top 10 for clarity
 
-  // 7. Logic Complexity
+  if (criticalIgnored.size > 0) {
+    analysis.impactAssessment.logic = {
+      status: "high-impact",
+      detail: "Custom conditional logic or functions detected. The prototype will use a simplified behavioral model."
+    };
+    analysis.compatibilityScore -= 30;
+  }
+
   const ifCount = xmlDoc.querySelectorAll('block[type="controls_if"]').length;
-  if (ifCount > 10) analysis.logicComplexity = "Very High";
-  else if (ifCount > 5) analysis.logicComplexity = "High";
-  else if (ifCount > 2) analysis.logicComplexity = "Medium";
-  else analysis.logicComplexity = "Low";
+  analysis.logicComplexity = ifCount > 10 ? "Very High" : ifCount > 5 ? "High" : ifCount > 2 ? "Medium" : "Low";
 
-  // 8. Warnings
-  if (analysis.ignored.length > 5) {
-    analysis.warnings.push("Large number of unsupported blocks detected. Strategy might behave differently.");
-  }
+  // 6. Final Prototype Readiness
   if (!xmlString.includes("after_purchase")) {
-    analysis.warnings.push("Missing 'After Purchase' block. Bot might only run once.");
+    analysis.warnings.push("No post-trade logic found. Risk of single-trade execution.");
+    analysis.compatibilityScore -= 20;
   }
 
-  analysis.detected.name = `Analyzed ${strategy} - ${analysis.detected.asset}`;
+  analysis.compatibilityScore = Math.max(10, analysis.compatibilityScore);
+  analysis.detected.name = `Prototype: ${strategy} (${analysis.detected.asset})`;
 
   return analysis;
 };
