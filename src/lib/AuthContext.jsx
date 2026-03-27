@@ -5,6 +5,7 @@ const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
   isLoadingAuth: true,
+  isLoadingPublicSettings: false,
   accounts: [],
   activeAccount: null,
   logout: () => {},
@@ -68,6 +69,7 @@ export const AuthProvider = ({ children }) => {
       user, 
       isAuthenticated, 
       isLoadingAuth,
+      isLoadingPublicSettings: false, // Placeholder for future app settings
       accounts,
       activeAccount,
       logout,
