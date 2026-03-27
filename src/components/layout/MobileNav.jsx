@@ -18,52 +18,49 @@ export default function MobileNav() {
     location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path))
   );
 
+  const itemWidth = 100 / navItems.length;
+  const centerX = (activeIndex * itemWidth) + (itemWidth / 2);
+
   return (
     <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 h-[70px]">
       <div className="relative w-full h-full">
-        {/* SVG Background with Dynamic Cutout */}
+        {/* SVG Background with Liquid Curve Cutout */}
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <svg width="100%" height="70" viewBox="0 0 100 70" preserveAspectRatio="none">
-            <defs>
-              <mask id="liquid-mask">
-                <rect x="0" y="0" width="100" height="70" fill="white" />
-                <motion.circle 
-                  animate={{ 
-                    cx: `${(activeIndex * (100 / navItems.length)) + (100 / navItems.length / 2)}` 
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 35 }}
-                  cy="15" 
-                  r="13" 
-                  fill="black" 
-                />
-              </mask>
-            </defs>
-            <rect 
-              x="0" 
-              y="15" 
-              width="100" 
-              height="55" 
-              rx="24" 
-              fill="#E31C4B" 
-              mask="url(#liquid-mask)"
+          <svg width="100%" height="70" viewBox="0 0 100 70" preserveAspectRatio="none" className="drop-shadow-2xl overflow-visible">
+            <motion.path
+              fill="#E31C4B"
+              animate={{
+                d: `M 0,20 
+                    L ${centerX - 15},20 
+                    C ${centerX - 10},20 ${centerX - 8},20 ${centerX - 7},15
+                    C ${centerX - 5},5 ${centerX + 5},5 ${centerX + 7},15
+                    C ${centerX + 8},20 ${centerX + 10},20 ${centerX + 15},20
+                    L 100,20 
+                    L 100,70 
+                    L 0,70 
+                    Z`
+              }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
             />
+            {/* Base bar with rounded corners */}
+            <rect x="0" y="20" width="100" height="50" rx="24" fill="#E31C4B" />
           </svg>
         </div>
 
         {/* Floating Circle Indicator */}
         <div className="absolute inset-0 pointer-events-none z-20">
           <motion.div
-            className="absolute top-[-25px] w-[60px] h-[60px]"
+            className="absolute top-[-22px] w-[60px] h-[60px]"
             initial={false}
             animate={{
-              left: `${(activeIndex * (100 / navItems.length)) + (100 / navItems.length / 2)}%`,
+              left: `${centerX}%`,
               translateX: "-50%"
             }}
-            transition={{ type: "spring", stiffness: 300, damping: 35 }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
           >
-            <div className="w-full h-full bg-white rounded-full border-[5px] border-[#E31C4B] shadow-xl flex items-center justify-center">
+            <div className="w-full h-full bg-white rounded-full border-[4px] border-primary shadow-xl flex items-center justify-center">
                {activeIndex !== -1 && (
-                <div className="text-[#E31C4B]">
+                <div className="text-primary">
                   {(() => {
                     const Icon = navItems[activeIndex].icon;
                     return <Icon className="h-7 w-7 stroke-[2.5px]" />;
@@ -84,7 +81,7 @@ export default function MobileNav() {
               <Link
                 key={item.path}
                 to={item.path}
-                className="relative flex flex-col items-center justify-center flex-1 h-full pt-4"
+                className="relative flex flex-col items-center justify-center flex-1 h-full pt-5"
               >
                 <motion.div
                   animate={{
@@ -100,10 +97,10 @@ export default function MobileNav() {
                 <motion.span
                   animate={{
                     opacity: isActive ? 1 : 0.7,
-                    y: isActive ? -5 : 0,
-                    scale: isActive ? 1.1 : 0.9,
+                    y: isActive ? -4 : 0,
+                    scale: isActive ? 1.05 : 0.9,
                   }}
-                  className={`text-[10px] uppercase tracking-widest text-white mt-1 transition-all duration-300 ${isActive ? 'font-black' : 'font-bold'}`}
+                  className={`text-[9px] uppercase tracking-widest text-white mt-1 transition-all duration-300 ${isActive ? 'font-black' : 'font-bold'}`}
                 >
                   {item.label}
                 </motion.span>
