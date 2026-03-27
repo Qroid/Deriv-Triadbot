@@ -46,10 +46,10 @@ export default function MarketAnalysis() {
   const summaryStats = useMemo(() => {
     let positive = 0, negative = 0, neutral = 0;
     ALL_ASSETS.forEach(a => {
-      const sig = marketData[a]?.signal?.type;
-      if (sig?.includes("UP") || sig?.includes("OVER")) positive++;
-      else if (sig?.includes("DOWN") || sig?.includes("UNDER")) negative++;
-      else neutral++;
+      const sig = marketData[a]?.signal?.confidence;
+      if (sig >= 70) positive++;
+      else if (sig >= 40) neutral++;
+      else negative++;
     });
     return { positive, negative, neutral };
   }, [marketData]);
@@ -59,8 +59,8 @@ export default function MarketAnalysis() {
     const barrier = signal.barrier;
     const type = signal.contract;
     
-    toast.info(`Initiating Rapid Fire on ${asset}`, {
-      description: `Firing ${rfTrades} trades at $${rfStake} stake...`,
+    toast.success(`Strategy Execution: ${signal.type}`, {
+      description: `Initiating ${rfTrades} ${type} trades for ${asset}`,
     });
 
     initiateSequentialRapidFire(rfTrades, rfStake, type, barrier, symbol, signal.confidence);

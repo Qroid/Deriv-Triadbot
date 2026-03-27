@@ -141,12 +141,21 @@ export function analyzeMatchesDiffers(ticks, asset) {
   // 4. Signal Calculation
   let signal = { type: "NEUTRAL", confidence: 0, reason: "", contract: "", dir: "", barrier: lastDigit };
 
-  // MATCHES Logic
-  if (currentMatchStreak >= 3 || matchPct > 65 || predictedByCycle === "MATCHES") {
-    let confidence = 50;
-    if (currentMatchStreak >= 3) confidence += 20;
-    if (matchPct > 65) confidence += 15;
-    if (predictedByCycle === "MATCHES") confidence += 15;
+  // 4a. Digit Frequency Pair Strategy (Least Frequent)
+  const sortedDigits = Object.entries(lastDigits.reduce((acc, d) => {
+    acc[d] = (acc[d] || 0) + 1;
+    return acc;
+  }, {})).sort((a, b) => a[1] - b[1]);
+  
+  const leastFreq = parseInt(sortedDigits[0]?.[0]);
+  const secondLeastFreq = parseInt(sortedDigits[1]?.[0]);
+
+  // 5. MATCHES Logic
+  if (currentMatchStreak >= 2 || matchPct > 55 || predictedByCycle === "MATCHES") {
+    let confidence = 40;
+    if (currentMatchStreak >= 2) confidence += 30;
+    if (matchPct > 55) confidence += 20;
+    if (predictedByCycle === "MATCHES") confidence += 10;
 
     signal = {
       type: "MATCH SIGNAL",
@@ -154,34 +163,48 @@ export function analyzeMatchesDiffers(ticks, asset) {
       contract: "MATCHES",
       barrier: lastDigit,
       confidence: Math.min(confidence, 100),
-      reason: currentMatchStreak >= 3 ? `${currentMatchStreak}+ consecutive matches! Streak momentum.` : 
-              matchPct > 65 ? `High frequency match pattern (${matchPct.toFixed(1)}%).` : 
-              "Cyclic pattern suggests Match next.",
-      exitWarning: [8, 9].includes(lastDigit) ? "Pattern weakening near edge digits." : null
+      reason: `Match Streak: ${currentMatchStreak}x. Pattern suggest digit ${lastDigit} repeats.`,
+      exitWarning: [8, 9, 0, 1].includes(lastDigit) ? "Extreme digit edge warning." : null
     };
   }
-  // DIFFERS Logic (Prioritize high confidence Differs)
-  else if (currentDifferStreak >= 3 || differPct > 65 || predictedByCycle === "DIFFERS") {
-    let confidence = 60;
-    if (currentDifferStreak >= 3) confidence += 15;
-    if (differPct > 65) confidence += 10;
-    if (predictedByCycle === "DIFFERS") confidence += 15;
-
-    // Warning: Don't differ if we just saw a digit that breaks patterns
-    const isExitDigit = [0, 9].includes(lastDigit); // Examples of warning digits
-    if (isExitDigit) confidence -= 20;
+  // 6. DIFFERS Logic
+  else if (currentDifferStreak >= 5 || differPct > 70 || predictedByCycle === "DIFFERS") {
+    let confidence = 50;
+    if (currentDifferStreak >= 5) confidence += 20;
+    if (differPct > 70) confidence += 20;
+    if (predictedByCycle === "DIFFERS") confidence += 10;
 
     signal = {
       type: "DIFFERS SIGNAL",
       dir: "FALL",
       contract: "DIFFERS",
-      barrier: lastDigit === 0 ? 1 : 0, // Predict it won't be 0 (or 1 if current is 0)
+      barrier: lastDigit,
       confidence: Math.min(confidence, 100),
-      reason: currentDifferStreak >= 3 ? `${currentDifferStreak}+ consecutive differs! Strong stability.` : 
-              differPct > 65 ? `Stable differ environment (${differPct.toFixed(1)}%).` : 
-              "Cyclic pattern suggests Differ next.",
-      exitWarning: isExitDigit ? "Warning: Pattern break digit detected." : null
+      reason: `Differ Streak: ${currentDifferStreak}x. Stable digit volatility.`,
+      exitWarning: lastDigit === leastFreq ? "Digit frequency low - potential reversal." : null
     };
+  }
+  // 7. OVER/UNDER (Least Freq Strategy)
+  else if (leastFreq !== undefined) {
+    if (leastFreq <= 1) { // 0 or 1 are least frequent -> OVER 1
+      signal = {
+        type: "OVER SIGNAL",
+        dir: "RISE",
+        contract: "OVER",
+        barrier: 1,
+        confidence: 75,
+        reason: `Digit ${leastFreq} is cold. Prediction: OVER 1.`,
+      };
+    } else if (leastFreq >= 8) { // 8 or 9 are least frequent -> UNDER 8
+      signal = {
+        type: "UNDER SIGNAL",
+        dir: "FALL",
+        contract: "UNDER",
+        barrier: 8,
+        confidence: 75,
+        reason: `Digit ${leastFreq} is cold. Prediction: UNDER 8.`,
+      };
+    }
   }
 
   return signal;
