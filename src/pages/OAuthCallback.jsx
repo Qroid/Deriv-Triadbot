@@ -72,23 +72,23 @@ export default function OAuthCallback() {
           const data = await res.json();
 
           if (res.ok) {
-            // Handle successful token exchange
-            // Note: If Deriv returns tokens in the response body
-            if (data.access_token) {
-              // If it's a single token, we might need to call 'authorize' to get account details
-              // But for now, let's store it.
+            // 1. Handle Multi-Account response (preferred)
+            if (data.accounts && Array.isArray(data.accounts)) {
+              localStorage.setItem('deriv_accounts', JSON.stringify(data.accounts));
+              localStorage.setItem('active_loginid', data.accounts[0].loginid);
+              localStorage.setItem('deriv_token', data.accounts[0].token);
+            } 
+            // 2. Handle single token response
+            else if (data.access_token) {
               localStorage.setItem('deriv_token', data.access_token);
-              
-              // Cleanup
-              sessionStorage.removeItem('pkce_code_verifier');
-              sessionStorage.removeItem('oauth_state');
-
-              setStatus('success');
-              setTimeout(() => navigate('/'), 1500);
-            } else {
-              setStatus('error');
-              setErrorMessage('Exchange successful but no access token received.');
             }
+
+            // Cleanup security state
+            sessionStorage.removeItem('pkce_code_verifier');
+            sessionStorage.removeItem('oauth_state');
+
+            setStatus('success');
+            setTimeout(() => navigate('/'), 1500);
           } else {
             setStatus('error');
             setErrorMessage(data.error || 'Failed to exchange authorization code for token.');
