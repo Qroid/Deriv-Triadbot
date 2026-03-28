@@ -30,12 +30,41 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/';
   }, []);
 
-  const loginWithDeriv = () => {
-    // 32PgOi26JPTXu7dxCbWOI is your confirmed App ID
-    const appId = "32PgOi26JPTXu7dxCbWOI";
-    const url = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&l=en&brand=deriv`;
-    
-    console.log('Redirecting to Deriv OAuth:', url);
+  const loginWithDeriv = async () => {
+    // 1. Generate code_verifier (PKCE)
+    const array = crypto.getRandomValues(new Uint8Array(64));
+    const codeVerifier = Array.from(array)
+      .map(v => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'[v % 66])
+      .join('');
+
+    // 2. Derive code_challenge
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
+    const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    // 3. Generate state for CSRF protection
+    const state = crypto.getRandomValues(new Uint8Array(16))
+      .reduce((s, b) => s + b.toString(16).padStart(2, '0'), '');
+
+    // 4. Store in sessionStorage (survives the redirect)
+    sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+    sessionStorage.setItem('oauth_state', state);
+
+    // 5. Build New OAuth 2.0 URL
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: APP_CONFIG.APP_ID, // 32PgOi26JPTXu7dxCbWOI
+      redirect_uri: APP_CONFIG.REDIRECT_URL,
+      scope: 'trade account_manage',
+      state: state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256'
+    });
+
+    const url = `${APP_CONFIG.OAUTH_URL}?${params.toString()}`;
+    console.log('Redirecting to New Deriv OAuth 2.0:', url);
     window.location.href = url;
   };
 

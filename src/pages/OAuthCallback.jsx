@@ -10,62 +10,67 @@ export default function OAuthCallback() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    // Deriv OAuth can return params in either the query string OR the hash fragment
-    const getParams = () => {
-      const queryParams = new URLSearchParams(location.search);
-      const hashParams = new URLSearchParams(location.hash.replace('#', '?'));
-      
-      const combined = {};
-      // Hash params often used for tokens in implicit flow
-      for (const [key, value] of hashParams.entries()) combined[key] = value;
-      // Query params often used for errors or authorization code
-      for (const [key, value] of queryParams.entries()) combined[key] = value;
-      return combined;
+    const processCallback = async () => {
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const returnedState = params.get('state');
+      const storedState = sessionStorage.getItem('oauth_state');
+      const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+
+      // 1. Validate state to prevent CSRF
+      if (returnedState !== storedState) {
+        console.error('OAuth state mismatch. Potential CSRF detected.');
+        setStatus('error');
+        setErrorMessage('Security validation failed. Please try logging in again.');
+        return;
+      }
+
+      // 2. Handle errors from Deriv
+      if (params.has('error')) {
+        setStatus('error');
+        setErrorMessage(params.get('error_description') || params.get('error'));
+        return;
+      }
+
+      // 3. Extract accounts/tokens from URL (Deriv's unique redirect behavior)
+      // Deriv often redirects back with acct1, token1, etc., even in code flow
+      const accounts = [];
+      let i = 1;
+      while (params.has(`acct${i}`)) {
+        accounts.push({
+          loginid: params.get(`acct${i}`),
+          token: params.get(`token${i}`),
+          currency: params.get(`cur${i}`),
+        });
+        i++;
+      }
+
+      if (accounts.length > 0) {
+        localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
+        localStorage.setItem('active_loginid', accounts[0].loginid);
+        localStorage.setItem('deriv_token', accounts[0].token);
+
+        // Cleanup
+        sessionStorage.removeItem('pkce_code_verifier');
+        sessionStorage.removeItem('oauth_state');
+
+        setStatus('success');
+        setTimeout(() => navigate('/'), 1500);
+      } else if (code) {
+        // 4. Token Exchange (Backend requirement)
+        // Since this is a frontend-only app, we rely on Deriv's multi-account redirect.
+        // If Deriv strictly requires a backend exchange for 'code', 
+        // we might need to use response_type=token or a serverless function.
+        console.log('Authorization code received:', code);
+        setStatus('error');
+        setErrorMessage('Server-side token exchange is required for this flow. Please contact support.');
+      } else {
+        setStatus('error');
+        setErrorMessage('No trading accounts were found in the response.');
+      }
     };
 
-    const params = getParams();
-    const storedState = sessionStorage.getItem('oauth_state');
-    
-    // Validate state to prevent CSRF
-    if (params.state && storedState && params.state !== storedState) {
-      console.warn('OAuth state mismatch. Potential CSRF detected.');
-    }
-
-    const accounts = [];
-    
-    // Extract accounts/tokens from params (acct1, token1, cur1...)
-    // Deriv OAuth 2.0 multi-account response format
-    let i = 1;
-    while (params[`acct${i}`] || params[`token${i}`]) {
-      if (params[`acct${i}`] && params[`token${i}`]) {
-        accounts.push({
-          loginid: params[`acct${i}`],
-          token: params[`token${i}`],
-          currency: params[`cur${i}`] || 'USD',
-        });
-      }
-      i++;
-    }
-
-    if (accounts.length > 0) {
-      localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
-      localStorage.setItem('active_loginid', accounts[0].loginid);
-      localStorage.setItem('deriv_token', accounts[0].token);
-
-      // Clean up
-      sessionStorage.removeItem('oauth_state');
-
-      setStatus('success');
-      setTimeout(() => navigate('/'), 1500);
-    } else if (params.error || params.error_description) {
-      console.error('OAuth Error:', params.error, params.error_description);
-      setStatus('error');
-      setErrorMessage(params.error_description || params.error || 'Authentication failed.');
-    } else {
-      console.error('OAuth Failed. No accounts/tokens found in URL. Received:', params);
-      setStatus('error');
-      setErrorMessage('No trading accounts were found in the response. Please ensure you have an active Deriv account.');
-    }
+    processCallback();
   }, [location, navigate]);
 
   return (
