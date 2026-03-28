@@ -31,8 +31,21 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginWithDeriv = () => {
-    const url = `${APP_CONFIG.OAUTH_URL}?app_id=${APP_CONFIG.APP_ID}&l=en&brand=deriv`;
-    console.log('Redirecting to Deriv OAuth:', url);
+    const state = Math.random().toString(36).substring(2, 15);
+    sessionStorage.setItem('oauth_state', state);
+
+    const params = new URLSearchParams({
+      client_id: APP_CONFIG.APP_ID,
+      redirect_uri: APP_CONFIG.REDIRECT_URL,
+      scope: 'trade account_manage',
+      response_type: 'token',
+      state: state,
+      brand: 'deriv',
+      l: 'en'
+    });
+
+    const url = `${APP_CONFIG.OAUTH_URL}?${params.toString()}`;
+    console.log('Redirecting to Deriv OAuth 2.0:', url);
     window.location.href = url;
   };
 

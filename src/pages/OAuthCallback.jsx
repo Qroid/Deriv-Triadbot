@@ -15,24 +15,35 @@ export default function OAuthCallback() {
       const queryParams = new URLSearchParams(location.search);
       const hashParams = new URLSearchParams(location.hash.replace('#', '?'));
       
-      // Merge both, query taking precedence
       const combined = {};
+      // Hash params often used for tokens in implicit flow
       for (const [key, value] of hashParams.entries()) combined[key] = value;
+      // Query params often used for errors or authorization code
       for (const [key, value] of queryParams.entries()) combined[key] = value;
       return combined;
     };
 
     const params = getParams();
+    const storedState = sessionStorage.getItem('oauth_state');
+    
+    // Validate state to prevent CSRF
+    if (params.state && storedState && params.state !== storedState) {
+      console.warn('OAuth state mismatch. Potential CSRF detected.');
+    }
+
     const accounts = [];
     
     // Extract accounts/tokens from params (acct1, token1, cur1...)
+    // Deriv OAuth 2.0 multi-account response format
     let i = 1;
-    while (params[`acct${i}`]) {
-      accounts.push({
-        loginid: params[`acct${i}`],
-        token: params[`token${i}`],
-        currency: params[`cur${i}`],
-      });
+    while (params[`acct${i}`] || params[`token${i}`]) {
+      if (params[`acct${i}`] && params[`token${i}`]) {
+        accounts.push({
+          loginid: params[`acct${i}`],
+          token: params[`token${i}`],
+          currency: params[`cur${i}`] || 'USD',
+        });
+      }
       i++;
     }
 
@@ -41,12 +52,19 @@ export default function OAuthCallback() {
       localStorage.setItem('active_loginid', accounts[0].loginid);
       localStorage.setItem('deriv_token', accounts[0].token);
 
+      // Clean up
+      sessionStorage.removeItem('oauth_state');
+
       setStatus('success');
       setTimeout(() => navigate('/'), 1500);
-    } else {
-      console.error('OAuth Failed. Params received:', params);
+    } else if (params.error || params.error_description) {
+      console.error('OAuth Error:', params.error, params.error_description);
       setStatus('error');
-      setErrorMessage(params['error'] || 'Authentication failed. No accounts found in the response.');
+      setErrorMessage(params.error_description || params.error || 'Authentication failed.');
+    } else {
+      console.error('OAuth Failed. No accounts/tokens found in URL. Received:', params);
+      setStatus('error');
+      setErrorMessage('No trading accounts were found in the response. Please ensure you have an active Deriv account.');
     }
   }, [location, navigate]);
 
