@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Zap, ShieldAlert, Target, Activity } from "lucide-react";
 import LiveChart from "./LiveChart";
 import SignalBadge from "./SignalBadge";
+import DigitBoard from "./DigitBoard";
 import { getLastDigit, SYMBOL_MAP } from "../../hooks/useDerivTicks";
 
 const SHORT_NAMES = {
@@ -92,9 +93,16 @@ export default function AssetAnalysisCard({ asset, data, index = 0, onTrade }) {
         </div>
 
         {/* Mini chart */}
-        <div className="h-20 -mx-1">
+        <div className="h-16 -mx-1">
           <LiveChart ticks={data.ticks} changePct={data.changePct} />
         </div>
+
+        {/* Digit Frequency Board */}
+        <DigitBoard
+          digitCounts={data.digitCounts}
+          lastDigit={lastDigit}
+          totalTicks={totalTicks}
+        />
 
         {/* Entry/Exit Trading Signal Box */}
         <div className="space-y-2">

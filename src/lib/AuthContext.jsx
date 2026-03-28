@@ -31,17 +31,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginWithDeriv = () => {
-    const state = Math.random().toString(36).substring(2, 15);
-    sessionStorage.setItem('oauth_state', state);
-
-    // Deriv server requires response_type='code' for your Client ID
-    const params = new URLSearchParams({
-      app_id: APP_CONFIG.APP_ID,
-      l: 'en',
-      brand: 'deriv'
-    });
-
-    const url = `${APP_CONFIG.OAUTH_URL}?${params.toString()}`;
+    // 32PgOi26JPTXu7dxCbWOI is your confirmed App ID
+    const appId = "32PgOi26JPTXu7dxCbWOI";
+    const url = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&l=en&brand=deriv`;
+    
     console.log('Redirecting to Deriv OAuth:', url);
     window.location.href = url;
   };
