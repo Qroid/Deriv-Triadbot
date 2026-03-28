@@ -56,17 +56,51 @@ export default function OAuthCallback() {
 
         setStatus('success');
         setTimeout(() => navigate('/'), 1500);
-      } else if (code) {
+      } else if (code && codeVerifier) {
         // 4. Token Exchange (Backend requirement)
-        // Since this is a frontend-only app, we rely on Deriv's multi-account redirect.
-        // If Deriv strictly requires a backend exchange for 'code', 
-        // we might need to use response_type=token or a serverless function.
-        console.log('Authorization code received:', code);
-        setStatus('error');
-        setErrorMessage('Server-side token exchange is required for this flow. Please contact support.');
+        try {
+          const res = await fetch('/api/exchange-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code,
+              codeVerifier,
+              redirectUri: 'https://triadbot.vercel.app/callback',
+            }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            // Handle successful token exchange
+            // Note: If Deriv returns tokens in the response body
+            if (data.access_token) {
+              // If it's a single token, we might need to call 'authorize' to get account details
+              // But for now, let's store it.
+              localStorage.setItem('deriv_token', data.access_token);
+              
+              // Cleanup
+              sessionStorage.removeItem('pkce_code_verifier');
+              sessionStorage.removeItem('oauth_state');
+
+              setStatus('success');
+              setTimeout(() => navigate('/'), 1500);
+            } else {
+              setStatus('error');
+              setErrorMessage('Exchange successful but no access token received.');
+            }
+          } else {
+            setStatus('error');
+            setErrorMessage(data.error || 'Failed to exchange authorization code for token.');
+          }
+        } catch (err) {
+          console.error('Exchange error:', err);
+          setStatus('error');
+          setErrorMessage('An error occurred during secure token exchange.');
+        }
       } else {
         setStatus('error');
-        setErrorMessage('No trading accounts were found in the response.');
+        setErrorMessage('No trading accounts or valid authorization code were found.');
       }
     };
 
