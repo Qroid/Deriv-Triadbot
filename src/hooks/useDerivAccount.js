@@ -35,13 +35,16 @@ export const useDerivAccount = () => {
 
       if (data.error) {
         if (data.error.code === 'InvalidToken') {
+          console.warn('[useDerivAccount] Token invalid, logging out');
           logout();
         }
+        console.error('[useDerivAccount] error:', data.error.message);
         setError(data.error.message);
         return;
       }
 
       if (data.msg_type === 'authorize') {
+        console.log('[useDerivAccount] authorized successfully');
         setIsAuthorized(true);
         setBalance(data.authorize.balance);
         setCurrency(data.authorize.currency);

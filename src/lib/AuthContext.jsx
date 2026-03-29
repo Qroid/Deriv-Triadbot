@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }) => {
     // 5. Build New OAuth 2.0 URL
     const params = new URLSearchParams({
       response_type: 'code',
-      client_id: APP_CONFIG.APP_ID,
+      app_id: APP_CONFIG.APP_ID,
       redirect_uri: APP_CONFIG.REDIRECT_URL,
       scope: 'trade account_manage',
       state: state,
