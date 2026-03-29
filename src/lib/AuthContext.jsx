@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(() => {
     localStorage.removeItem('deriv_accounts');
     localStorage.removeItem('active_loginid');
+    localStorage.removeItem('deriv_token');
     setIsAuthenticated(false);
     setUser(null);
     setAccounts([]);

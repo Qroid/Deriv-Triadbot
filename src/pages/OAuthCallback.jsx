@@ -78,8 +78,17 @@ export default function OAuthCallback() {
               localStorage.setItem('active_loginid', data.accounts[0].loginid);
               localStorage.setItem('deriv_token', data.accounts[0].token);
             } 
-            // 2. Handle single token response
+            // 2. Handle single token response - save in format AuthContext reads on mount
             else if (data.access_token) {
+              const accounts = [{
+                loginid: 'deriv_user',
+                token: data.access_token,
+                currency: 'USD',
+                fullname: 'Trader',
+                balance: 0,
+              }];
+              localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
+              localStorage.setItem('active_loginid', 'deriv_user');
               localStorage.setItem('deriv_token', data.access_token);
             }
 
@@ -88,7 +97,8 @@ export default function OAuthCallback() {
             sessionStorage.removeItem('oauth_state');
 
             setStatus('success');
-            setTimeout(() => navigate('/'), 1500);
+            // Use window.location instead of navigate so AuthContext re-mounts fresh
+            setTimeout(() => { window.location.href = '/'; }, 1500);
           } else {
             setStatus('error');
             setErrorMessage(data.error || 'Failed to exchange authorization code for token.');
