@@ -29,7 +29,36 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: data.error || 'Token exchange failed' });
     }
 
-    return res.status(200).json(data);
+    const access_token = data.access_token;
+
+    // Step 2 — Fetch real account info using the Bearer token
+    // Deriv REST API for account info (options/accounts)
+    try {
+      const accountRes = await fetch('https://api.derivws.com/trading/v1/options/accounts', {
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (accountRes.ok) {
+        const accountData = await accountRes.json();
+        // Return token + real account data together
+        return res.status(200).json({
+          access_token,
+          expires_in: data.expires_in,
+          account: accountData, // contains name, loginid, balance, currency
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch account info from REST API:', err);
+    }
+
+    // Fallback — return just the token if account fetch fails
+    return res.status(200).json({
+      access_token,
+      expires_in: data.expires_in,
+    });
   } catch (error) {
     console.error('Fetch Error:', error);
     return res.status(500).json({ error: 'Internal server error during token exchange' });

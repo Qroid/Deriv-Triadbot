@@ -78,17 +78,20 @@ export default function OAuthCallback() {
               localStorage.setItem('active_loginid', data.accounts[0].loginid);
               localStorage.setItem('deriv_token', data.accounts[0].token);
             } 
-            // 2. Handle single token response - save in format AuthContext reads on mount
+            // 2. Handle single token + account response (real data from backend)
             else if (data.access_token) {
+              const accountInfo = data.account; // real data from Deriv API
+
               const accounts = [{
-                loginid: 'deriv_user',
+                loginid: accountInfo?.loginid || accountInfo?.id || 'deriv_user',
                 token: data.access_token,
-                currency: 'USD',
-                fullname: 'Trader',
-                balance: 0,
+                currency: accountInfo?.currency || 'USD',
+                fullname: accountInfo?.name || accountInfo?.fullname || 'Trader',
+                balance: accountInfo?.balance ?? 0,
               }];
+              
               localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
-              localStorage.setItem('active_loginid', 'deriv_user');
+              localStorage.setItem('active_loginid', accounts[0].loginid);
               localStorage.setItem('deriv_token', data.access_token);
             }
 
