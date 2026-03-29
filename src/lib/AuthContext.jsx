@@ -116,8 +116,8 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true); 
           if (account) { 
             setUser({ 
-              name: account.fullname || 'Trader', 
-              id: account.loginid, 
+              name: account.fullname || account.name || 'Trader', 
+              id: account.loginid || account.id, 
               currency: account.currency, 
               balance: account.balance, 
             }); 

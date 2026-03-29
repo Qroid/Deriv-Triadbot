@@ -61,7 +61,7 @@ export default function Settings() {
                 <CheckCircle2 className="h-4 w-4 text-success" />
                 <div>
                   <p className="text-xs font-black text-success uppercase tracking-widest">Linked Account</p>
-                  <p className="text-lg font-black text-foreground">{user?.id}</p>
+                  <p className="text-lg font-black text-foreground">{user?.id || user?.loginid}</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" onClick={logout} className="text-[10px] text-primary font-black uppercase tracking-widest hover:bg-primary/5">
@@ -71,11 +71,11 @@ export default function Settings() {
             <div className="pt-2 border-t border-success/10 flex gap-6">
                <div>
                  <p className="text-[9px] text-muted-foreground uppercase font-bold">Balance</p>
-                 <p className="text-sm font-black">{user?.currency} {user?.balance}</p>
+                 <p className="text-sm font-black">{user?.currency || 'USD'} {user?.balance !== undefined && user?.balance !== null ? user.balance : '-'}</p>
                </div>
                <div>
-                 <p className="text-[9px] text-muted-foreground uppercase font-bold">Markup Earned</p>
-                 <p className="text-sm font-black text-primary">$0.00</p>
+                 <p className="text-[9px] text-muted-foreground uppercase font-bold">Account Name</p>
+                 <p className="text-sm font-black">{user?.name || 'Trader'}</p>
                </div>
             </div>
           </div>

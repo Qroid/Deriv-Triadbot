@@ -61,21 +61,23 @@ export default async function handler(req, res) {
 
     // Step 6 — Fetch account info
     let account = null;
-    let loginid, fullname, currency, balance;
     try {
       const accountRes = await fetch('https://api.derivws.com/trading/v1/options/accounts', {
         headers: { Authorization: `Bearer ${access_token}` },
       });
-      if (accountRes.ok) {
-        const accountsData = await accountRes.json();
-        if (Array.isArray(accountsData) && accountsData.length > 0) {
-          const acc = accountsData[0];
-          loginid = acc.loginid;
-          fullname = acc.name;
-          currency = acc.currency;
-          balance = acc.balance;
-          account = { loginid, fullname, currency, balance };
-        }
+      
+      console.log('[exchange-token] account response status:', accountRes.status);
+      const accountsData = await accountRes.json();
+      console.log('[exchange-token] account data:', JSON.stringify(accountsData));
+
+      if (accountRes.ok && Array.isArray(accountsData) && accountsData.length > 0) {
+        const acc = accountsData[0];
+        account = { 
+          loginid: acc.loginid ?? acc.id ?? acc.account_id, 
+          fullname: acc.name ?? acc.full_name ?? acc.fullname ?? 'Trader', 
+          currency: acc.currency ?? 'USD', 
+          balance: acc.balance ?? acc.available_balance ?? 0, 
+        };
       }
     } catch (err) {
       console.error('[exchange-token] Account fetch failed:', err);
