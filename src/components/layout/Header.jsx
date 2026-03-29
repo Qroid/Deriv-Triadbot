@@ -26,19 +26,19 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               {/* Account Balance */}
-              <div className="hidden md:flex flex-col items-end mr-2">
+              <div className="flex flex-col items-end mr-2">
                 <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Balance</p>
                 <p className="text-sm font-black text-white font-mono leading-none">
                   {isAuthorized ? `${currency} ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}
                 </p>
               </div>
 
-              <div className={`hidden sm:flex items-center gap-2 rounded-xl px-3.5 py-1.5 border text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-500 ${
-                isAuthorized ? "bg-white/10 border-white/20 text-white shadow-sm" : "bg-black/5 border-black/5 text-white/20"
-              }`}>
-                <div className={`h-1.5 w-1.5 rounded-full ${isAuthorized ? "bg-success animate-pulse" : "bg-white/10"}`} />
-                {isAuthorized ? "Live Market" : "Connecting..."}
-              </div>
+              {isAuthorized && (
+                <div className="hidden sm:flex items-center gap-2 rounded-xl px-3.5 py-1.5 border border-white/20 bg-white/10 text-white text-[9px] font-black uppercase tracking-[0.15em] shadow-sm transition-all duration-500">
+                  <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                  Live Market
+                </div>
+              )}
               <Link to="/settings" className="h-10 w-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all duration-300">
                 <User className="h-5 w-5 text-white" />
               </Link>
