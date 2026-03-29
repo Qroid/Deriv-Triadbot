@@ -4,18 +4,22 @@
  */
 import { useState, useCallback } from "react";
 import { APP_CONFIG } from "../lib/config";
-
-const TOKEN_KEY = "deriv_token";
+import { getDerivToken } from "../utils/auth";
 
 export function useDerivAuth() {
-  const [token, setTokenState] = useState(() => localStorage.getItem(TOKEN_KEY) || "");
+  const [token, setTokenState] = useState(() => getDerivToken() || "");
   const [isConnected, setIsConnected] = useState(false);
   const [accountInfo, setAccountInfo] = useState(null);
 
   const saveToken = useCallback((t) => {
     setTokenState(t);
-    if (t) localStorage.setItem(TOKEN_KEY, t);
-    else localStorage.removeItem(TOKEN_KEY);
+    if (t) {
+      localStorage.setItem("deriv_token", t);
+      document.cookie = `deriv_token=${t}; Secure; SameSite=Strict; Path=/; Max-Age=3600`;
+    } else {
+      localStorage.removeItem("deriv_token");
+      document.cookie = "deriv_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    }
   }, []);
 
   const connect = useCallback((t) => {

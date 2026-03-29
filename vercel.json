@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://auth.deriv.com https://api.derivws.com; img-src 'self' data:; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://auth.deriv.com https://*.derivws.com wss://*.derivws.com; img-src 'self' data: https://base44.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'"
         },
         {
           "key": "X-Frame-Options",

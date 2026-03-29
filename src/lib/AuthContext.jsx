@@ -26,6 +26,8 @@ export const AuthProvider = ({ children }) => {
       .finally(() => { 
         ['deriv_display_account','deriv_accounts','active_loginid', 
          'deriv_token','deriv_user'].forEach(k => localStorage.removeItem(k)); 
+        // Clear non-HttpOnly cookie
+        document.cookie = 'deriv_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         setIsAuthenticated(false); 
         setUser(null); 
         setAccounts([]); 
@@ -104,16 +106,14 @@ export const AuthProvider = ({ children }) => {
   }, [accounts]);
 
   useEffect(() => { 
-    setIsLoadingAuth(true);
     fetch('/api/me') 
       .then(r => r.json()) 
       .then(data => { 
         if (data.authenticated) { 
           const saved = localStorage.getItem('deriv_display_account'); 
           const account = saved ? JSON.parse(saved) : null; 
-          
+          setIsAuthenticated(true); 
           if (account) { 
-            setIsAuthenticated(true); 
             setUser({ 
               name: account.fullname || 'Trader', 
               id: account.loginid, 
@@ -122,20 +122,12 @@ export const AuthProvider = ({ children }) => {
             }); 
             setActiveAccount(account); 
             setAccounts([account]); 
-          } else {
-            // No saved account data, logout to be safe
-            logout();
-          }
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
+          } 
+        } 
       }) 
-      .catch(() => {
-        setIsAuthenticated(false);
-      }) 
+      .catch(() => {}) 
       .finally(() => setIsLoadingAuth(false)); 
-  }, [logout]); 
+  }, []); 
 
   return (
     <AuthContext.Provider value={{ 

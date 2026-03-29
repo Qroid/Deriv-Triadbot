@@ -1,21 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../lib/AuthContext';
 import { APP_CONFIG } from '../lib/config';
 
-export function useDerivAccount() {
-  const [account, setAccount] = useState({
-    balance: 0,
-    currency: 'USD',
-    isAuthorized: false,
-    loginid: '',
-  });
-  const wsRef = useRef(null);
+import { getDerivToken } from '../utils/auth';
 
-  useEffect(() => {
-    const token = localStorage.getItem('deriv_token');
-    if (!token) return;
+export const useDerivAccount = () => {
+  const { user, isAuthenticated, logout } = useAuth();
+  const [balance, setBalance] = useState(0);
+  const [currency, setCurrency] = useState('USD');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [error, setError] = useState(null);
+  const socketRef = useRef(null);
 
-    const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);
-    wsRef.current = ws;
+  const connect = useCallback(() => {
+    // Read token from unified auth utility (localStorage or Cookie)
+    const token = getDerivToken();
+    if (!token) {
+      setIsAuthorized(false);
+      return;
+    }
+
+    if (socketRef.current?.readyState === WebSocket.OPEN) return;
+
+    const ws = new WebSocket(APP_CONFIG.WS_URL);
+    socketRef.current = ws;
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ authorize: token }));
@@ -25,36 +33,61 @@ export function useDerivAccount() {
       const data = JSON.parse(msg.data);
 
       if (data.error) {
-        console.error('Account Error:', data.error.message);
+        if (data.error.code === 'InvalidToken') {
+          logout();
+        }
+        setError(data.error.message);
         return;
       }
 
       if (data.msg_type === 'authorize') {
-        setAccount(prev => ({
-          ...prev,
-          isAuthorized: true,
-          balance: data.authorize.balance,
-          currency: data.authorize.currency,
-          loginid: data.authorize.loginid,
-        }));
-
+        setIsAuthorized(true);
+        setBalance(data.authorize.balance);
+        setCurrency(data.authorize.currency);
+        
         // Subscribe to balance updates
         ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
       }
 
       if (data.msg_type === 'balance') {
-        setAccount(prev => ({
-          ...prev,
-          balance: data.balance.balance,
-          currency: data.balance.currency,
-        }));
+        setBalance(data.balance.balance);
+        setCurrency(data.balance.currency);
       }
     };
 
-    return () => {
-      if (wsRef.current) wsRef.current.close();
+    ws.onclose = () => {
+      setIsAuthorized(false);
     };
-  }, []);
 
-  return account;
-}
+    ws.onerror = (err) => {
+      console.error('[deriv-account] ws error:', err);
+      setError('Connection failed');
+    };
+  }, [logout]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      connect();
+    } else {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+      setIsAuthorized(false);
+      setBalance(0);
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
+  }, [isAuthenticated, connect]);
+
+  return {
+    balance,
+    currency,
+    isAuthorized,
+    error,
+    account_id: user?.id,
+  };
+};

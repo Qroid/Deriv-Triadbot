@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { APP_CONFIG } from '../lib/config';
+import { getDerivToken } from '../utils/auth';
 
 /**
  * useDerivTrading - Ported Sequential Rapid Fire & Trade Execution
@@ -32,7 +33,7 @@ export function useDerivTrading() {
 
   // Connect WebSocket for trading
   useEffect(() => {
-    const token = localStorage.getItem('deriv_token');
+    const token = getDerivToken();
     if (!token) return;
 
     const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);

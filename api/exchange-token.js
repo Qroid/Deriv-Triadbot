@@ -15,7 +15,17 @@ export default async function handler(req, res) {
   }
 
   // Step 4 — Destructure and validate inputs
-  const { code, codeVerifier, redirectUri } = req.body;
+  const { code, codeVerifier, redirectUri, token } = req.body;
+
+  // Handle direct token set (Legacy/Hybrid path)
+  if (token && typeof token === 'string' && token.length > 0) {
+    res.setHeader('Set-Cookie',
+      `deriv_token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=3600`
+    );
+    return res.status(200).json({ success: true });
+  }
+
+  // Standard Code Flow
   if (
     !code || typeof code !== 'string' || code.length > 512 ||
     !codeVerifier || typeof codeVerifier !== 'string' || codeVerifier.length < 43 || codeVerifier.length > 256 ||
@@ -58,7 +68,6 @@ export default async function handler(req, res) {
       });
       if (accountRes.ok) {
         const accountsData = await accountRes.json();
-        // Assuming the first account or some logic to pick the primary one
         if (Array.isArray(accountsData) && accountsData.length > 0) {
           const acc = accountsData[0];
           loginid = acc.loginid;
@@ -70,12 +79,11 @@ export default async function handler(req, res) {
       }
     } catch (err) {
       console.error('[exchange-token] Account fetch failed:', err);
-      account = null;
     }
 
-    // Step 7 — Set cookie
+    // Step 7 — Set cookie (REMOVED HttpOnly to allow frontend hooks to authorized WebSockets)
     res.setHeader('Set-Cookie',
-      `deriv_token=${access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600`
+      `deriv_token=${access_token}; Secure; SameSite=Strict; Path=/; Max-Age=3600`
     );
 
     // Step 8 — Return safe response only

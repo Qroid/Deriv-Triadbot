@@ -39,30 +39,49 @@ export default function OAuthCallback() {
         accounts.push({
           loginid: params.get(`acct${i}`),
           currency: params.get(`cur${i}`),
+          token: params.get(`token${i}`), // Legacy token
         });
         i++;
       }
 
       if (accounts.length > 0) {
-        // Handle legacy/URL-params based redirect (Deriv's unique behavior)
-        const account = {
-          loginid: accounts[0].loginid,
-          currency: accounts[0].currency,
-          fullname: 'Trader',
-          balance: 0
-        };
-        localStorage.setItem('deriv_display_account', JSON.stringify(account));
-        localStorage.setItem('active_loginid', account.loginid);
-        
-        // Cleanup security state
-        sessionStorage.removeItem('pkce_code_verifier');
-        sessionStorage.removeItem('oauth_state');
+        // Hybrid path: We have tokens in the URL.
+        // We MUST still call the backend to set the secure cookie.
+        try {
+          const res = await fetch('/api/exchange-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: accounts[0].token,
+            }),
+          });
 
-        setStatus('success');
-        // Force full page reload so AuthContext re-mounts and calls /api/me
-        setTimeout(() => { window.location.href = '/'; }, 1500);
+          if (res.ok) {
+            const account = {
+              loginid: accounts[0].loginid,
+              currency: accounts[0].currency,
+              fullname: 'Trader',
+              balance: 0
+            };
+            localStorage.setItem('deriv_display_account', JSON.stringify(account));
+            localStorage.setItem('active_loginid', account.loginid);
+            
+            // Cleanup security state
+            sessionStorage.removeItem('pkce_code_verifier');
+            sessionStorage.removeItem('oauth_state');
+
+            setStatus('success');
+            setTimeout(() => { window.location.href = '/'; }, 1500);
+          } else {
+            throw new Error('Failed to synchronize session with backend');
+          }
+        } catch (err) {
+          console.error('[auth] legacy sync error:', err);
+          setStatus('error');
+          setErrorMessage('Failed to securely link your account. Please try again.');
+        }
       } else if (code && codeVerifier) {
-        // Secure Token Exchange via Backend
+        // 4. Token Exchange via Backend
         try {
           const res = await fetch('/api/exchange-token', {
             method: 'POST',
@@ -77,18 +96,14 @@ export default function OAuthCallback() {
           const data = await res.json();
 
           if (res.ok) {
-            // Save display data if returned by backend
             if (data.account) { 
               localStorage.setItem('deriv_display_account', JSON.stringify(data.account)); 
               localStorage.setItem('active_loginid', data.account.loginid);
             } 
             
-            // Cleanup security state
             sessionStorage.removeItem('pkce_code_verifier'); 
             sessionStorage.removeItem('oauth_state'); 
-            
             setStatus('success'); 
-            // Force full page reload so AuthContext re-mounts and calls /api/me
             setTimeout(() => { window.location.href = '/'; }, 1500); 
           } else {
             setStatus('error');
