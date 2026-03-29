@@ -82,9 +82,10 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.setItem('oauth_state', state);
 
     // 5. Build New OAuth 2.0 URL
+    // NOTE: For Deriv's /authorize endpoint, we MUST use client_id, not app_id.
     const params = new URLSearchParams({
       response_type: 'code',
-      app_id: APP_CONFIG.APP_ID,
+      client_id: APP_CONFIG.APP_ID,
       redirect_uri: APP_CONFIG.REDIRECT_URL,
       scope: 'trade account_manage',
       state: state,
