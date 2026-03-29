@@ -22,7 +22,8 @@ export const useDerivAccount = () => {
 
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(APP_CONFIG.WS_URL);
+    // Fixed WebSocket URL to include app_id for proper authorization
+    const ws = new WebSocket(`${APP_CONFIG.WS_URL}?app_id=${APP_CONFIG.APP_ID}`);
     socketRef.current = ws;
 
     ws.onopen = () => {
