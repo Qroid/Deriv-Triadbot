@@ -1,66 +1,90 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  // Step 1 — Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', 'https://triadbot.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { code, codeVerifier, redirectUri } = req.body;
+  // Step 2 — Method check
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  if (!code || !codeVerifier || !redirectUri) {
-    return res.status(400).json({ error: 'Missing required parameters' });
+  // Step 3 — Origin check
+  const origin = req.headers['origin'];
+  if (origin !== 'https://triadbot.vercel.app') {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: process.env.DERIV_CLIENT_ID || '32PgOi26JPTXu7dxCbWOI',
-    code,
-    code_verifier: codeVerifier,
-    redirect_uri: redirectUri,
-  });
+  // Step 4 — Destructure and validate inputs
+  const { code, codeVerifier, redirectUri } = req.body;
+  if (
+    !code || typeof code !== 'string' || code.length > 512 ||
+    !codeVerifier || typeof codeVerifier !== 'string' || codeVerifier.length < 43 || codeVerifier.length > 256 ||
+    redirectUri !== 'https://triadbot.vercel.app/callback'
+  ) {
+    return res.status(400).json({ error: 'Invalid request parameters' });
+  }
 
   try {
-    const response = await fetch('https://auth.deriv.com/oauth2/token', {
+    // Step 5 — Exchange code for token
+    const tokenParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: process.env.DERIV_CLIENT_ID || '32PgOi26JPTXu7dxCbWOI',
+      code,
+      code_verifier: codeVerifier,
+      redirect_uri: redirectUri,
+    });
+
+    const tokenRes = await fetch('https://auth.deriv.com/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
+      body: tokenParams.toString(),
     });
 
-    const data = await response.json();
+    const tokenData = await tokenRes.json();
 
-    if (!response.ok) {
-      console.error('Deriv Token Error:', data);
-      return res.status(response.status).json({ error: data.error || 'Token exchange failed' });
+    if (!tokenRes.ok) {
+      console.error('[exchange-token] Deriv error:', tokenData);
+      return res.status(400).json({ error: 'Authentication failed' });
     }
 
-    const access_token = data.access_token;
+    const { access_token } = tokenData;
 
-    // Step 2 — Fetch real account info using the Bearer token
-    // Deriv REST API for account info (options/accounts)
+    // Step 6 — Fetch account info
+    let account = null;
+    let loginid, fullname, currency, balance;
     try {
       const accountRes = await fetch('https://api.derivws.com/trading/v1/options/accounts', {
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${access_token}` },
       });
-
       if (accountRes.ok) {
-        const accountData = await accountRes.json();
-        // Return token + real account data together
-        return res.status(200).json({
-          access_token,
-          expires_in: data.expires_in,
-          account: accountData, // contains name, loginid, balance, currency
-        });
+        const accountsData = await accountRes.json();
+        // Assuming the first account or some logic to pick the primary one
+        if (Array.isArray(accountsData) && accountsData.length > 0) {
+          const acc = accountsData[0];
+          loginid = acc.loginid;
+          fullname = acc.name;
+          currency = acc.currency;
+          balance = acc.balance;
+          account = { loginid, fullname, currency, balance };
+        }
       }
     } catch (err) {
-      console.error('Failed to fetch account info from REST API:', err);
+      console.error('[exchange-token] Account fetch failed:', err);
+      account = null;
     }
 
-    // Fallback — return just the token if account fetch fails
+    // Step 7 — Set cookie
+    res.setHeader('Set-Cookie',
+      `deriv_token=${access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600`
+    );
+
+    // Step 8 — Return safe response only
     return res.status(200).json({
-      access_token,
-      expires_in: data.expires_in,
+      success: true,
+      account: account ? { loginid, fullname, currency, balance } : null
     });
   } catch (error) {
-    console.error('Fetch Error:', error);
-    return res.status(500).json({ error: 'Internal server error during token exchange' });
+    console.error('[exchange-token] Internal error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

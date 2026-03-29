@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { APP_CONFIG } from '../lib/config';
+import { useAuth } from '../lib/AuthContext';
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { handleOAuthCallback } = useAuth();
   const [status, setStatus] = useState('processing'); // 'processing' | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -19,7 +20,6 @@ export default function OAuthCallback() {
 
       // 1. Validate state to prevent CSRF
       if (returnedState !== storedState) {
-        console.error('OAuth state mismatch. Potential CSRF detected.');
         setStatus('error');
         setErrorMessage('Security validation failed. Please try logging in again.');
         return;
@@ -32,32 +32,36 @@ export default function OAuthCallback() {
         return;
       }
 
-      // 3. Extract accounts/tokens from URL (Deriv's unique redirect behavior)
-      // Deriv often redirects back with acct1, token1, etc., even in code flow
+      // 3. Extract accounts from URL (Legacy/Alternative Deriv behavior)
       const accounts = [];
       let i = 1;
       while (params.has(`acct${i}`)) {
         accounts.push({
           loginid: params.get(`acct${i}`),
-          token: params.get(`token${i}`),
           currency: params.get(`cur${i}`),
         });
         i++;
       }
 
       if (accounts.length > 0) {
-        localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
-        localStorage.setItem('active_loginid', accounts[0].loginid);
-        localStorage.setItem('deriv_token', accounts[0].token);
-
+        // Task 7 - Change 3: Build account object from acct1, cur1 only.
+        const account = {
+          loginid: accounts[0].loginid,
+          currency: accounts[0].currency,
+          fullname: 'Trader',
+          balance: 0
+        };
+        localStorage.setItem('deriv_display_account', JSON.stringify(account));
+        
         // Cleanup
         sessionStorage.removeItem('pkce_code_verifier');
         sessionStorage.removeItem('oauth_state');
 
         setStatus('success');
-        setTimeout(() => navigate('/'), 1500);
+        // Task 7 - Change 2: Use window.location.href = '/' NOT navigate('/')
+        setTimeout(() => { window.location.href = '/'; }, 1500);
       } else if (code && codeVerifier) {
-        // 4. Token Exchange (Backend requirement)
+        // 4. Token Exchange via Backend
         try {
           const res = await fetch('/api/exchange-token', {
             method: 'POST',
@@ -72,42 +76,20 @@ export default function OAuthCallback() {
           const data = await res.json();
 
           if (res.ok) {
-            // 1. Handle Multi-Account response (preferred)
-            if (data.accounts && Array.isArray(data.accounts)) {
-              localStorage.setItem('deriv_accounts', JSON.stringify(data.accounts));
-              localStorage.setItem('active_loginid', data.accounts[0].loginid);
-              localStorage.setItem('deriv_token', data.accounts[0].token);
+            // Task 7 - Change 2: Success path
+            if (data.account) { 
+              localStorage.setItem('deriv_display_account', JSON.stringify(data.account)); 
             } 
-            // 2. Handle single token + account response (real data from backend)
-            else if (data.access_token) {
-              const accountInfo = data.account; // real data from Deriv API
-
-              const accounts = [{
-                loginid: accountInfo?.loginid || accountInfo?.id || 'deriv_user',
-                token: data.access_token,
-                currency: accountInfo?.currency || 'USD',
-                fullname: accountInfo?.name || accountInfo?.fullname || 'Trader',
-                balance: accountInfo?.balance ?? 0,
-              }];
-              
-              localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
-              localStorage.setItem('active_loginid', accounts[0].loginid);
-              localStorage.setItem('deriv_token', data.access_token);
-            }
-
-            // Cleanup security state
-            sessionStorage.removeItem('pkce_code_verifier');
-            sessionStorage.removeItem('oauth_state');
-
-            setStatus('success');
-            // Use window.location instead of navigate so AuthContext re-mounts fresh
-            setTimeout(() => { window.location.href = '/'; }, 1500);
+            sessionStorage.removeItem('pkce_code_verifier'); 
+            sessionStorage.removeItem('oauth_state'); 
+            setStatus('success'); 
+            setTimeout(() => { window.location.href = '/'; }, 1500); 
           } else {
             setStatus('error');
             setErrorMessage(data.error || 'Failed to exchange authorization code for token.');
           }
         } catch (err) {
-          console.error('Exchange error:', err);
+          console.error('[auth] exchange error');
           setStatus('error');
           setErrorMessage('An error occurred during secure token exchange.');
         }
@@ -118,7 +100,7 @@ export default function OAuthCallback() {
     };
 
     processCallback();
-  }, [location, navigate]);
+  }, [location, handleOAuthCallback]);
 
   return (
     <div className="fixed inset-0 bg-background flex items-center justify-center p-6 text-center">

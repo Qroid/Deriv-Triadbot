@@ -11,6 +11,7 @@ const AuthContext = createContext({
   logout: () => {},
   loginWithDeriv: () => {},
   switchAccount: () => {},
+  handleOAuthCallback: () => {},
 });
 
 export const AuthProvider = ({ children }) => {
@@ -20,16 +21,41 @@ export const AuthProvider = ({ children }) => {
   const [accounts, setAccounts] = useState([]);
   const [activeAccount, setActiveAccount] = useState(null);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('deriv_accounts');
-    localStorage.removeItem('active_loginid');
-    localStorage.removeItem('deriv_token');
-    setIsAuthenticated(false);
-    setUser(null);
-    setAccounts([]);
-    setActiveAccount(null);
-    window.location.href = '/';
-  }, []);
+  const logout = useCallback(() => { 
+    fetch('/api/logout', { method: 'POST' }) 
+      .finally(() => { 
+        ['deriv_display_account','deriv_accounts','active_loginid', 
+         'deriv_token','deriv_user'].forEach(k => localStorage.removeItem(k)); 
+        setIsAuthenticated(false); 
+        setUser(null); 
+        setAccounts([]); 
+        setActiveAccount(null); 
+        window.location.href = '/'; 
+      }); 
+  }, []); 
+
+  const handleOAuthCallback = useCallback(async (code, codeVerifier) => { 
+    try { 
+      const res = await fetch('/api/exchange-token', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          code, 
+          codeVerifier, 
+          redirectUri: 'https://triadbot.vercel.app/callback', 
+        }), 
+      }); 
+      const data = await res.json(); 
+      if (!res.ok) throw new Error(data.error || 'Exchange failed'); 
+      if (data.account) { 
+        localStorage.setItem('deriv_display_account', JSON.stringify(data.account)); 
+      } 
+      window.location.href = '/'; 
+    } catch (err) { 
+      console.error('[auth] callback processing failed'); 
+      window.location.href = '/?error=exchange_failed'; 
+    } 
+  }, []); 
 
   const loginWithDeriv = async () => {
     // 1. Generate code_verifier (PKCE)
@@ -56,7 +82,7 @@ export const AuthProvider = ({ children }) => {
     // 5. Build New OAuth 2.0 URL
     const params = new URLSearchParams({
       response_type: 'code',
-      client_id: APP_CONFIG.APP_ID, // 32PgOi26JPTXu7dxCbWOI
+      client_id: APP_CONFIG.APP_ID,
       redirect_uri: APP_CONFIG.REDIRECT_URL,
       scope: 'trade account_manage',
       state: state,
@@ -65,7 +91,6 @@ export const AuthProvider = ({ children }) => {
     });
 
     const url = `${APP_CONFIG.OAUTH_URL}?${params.toString()}`;
-    console.log('Redirecting to New Deriv OAuth 2.0:', url);
     window.location.href = url;
   };
 
@@ -78,24 +103,29 @@ export const AuthProvider = ({ children }) => {
     }
   }, [accounts]);
 
-  useEffect(() => {
-    const savedAccounts = JSON.parse(localStorage.getItem('deriv_accounts') || '[]');
-    const savedActiveLoginid = localStorage.getItem('active_loginid');
-
-    if (savedAccounts.length > 0) {
-      setAccounts(savedAccounts);
-      const active = savedAccounts.find(acc => acc.loginid === savedActiveLoginid) || savedAccounts[0];
-      setActiveAccount(active);
-      setIsAuthenticated(true);
-      setUser({
-        name: active.fullname || 'Trader',
-        id: active.loginid,
-        currency: active.currency,
-        balance: active.balance
-      });
-    }
-    setIsLoadingAuth(false);
-  }, []);
+  useEffect(() => { 
+    fetch('/api/me') 
+      .then(r => r.json()) 
+      .then(data => { 
+        if (data.authenticated) { 
+          const saved = localStorage.getItem('deriv_display_account'); 
+          const account = saved ? JSON.parse(saved) : null; 
+          setIsAuthenticated(true); 
+          if (account) { 
+            setUser({ 
+              name: account.fullname || 'Trader', 
+              id: account.loginid, 
+              currency: account.currency, 
+              balance: account.balance, 
+            }); 
+            setActiveAccount(account); 
+            setAccounts([account]); 
+          } 
+        } 
+      }) 
+      .catch(() => {}) 
+      .finally(() => setIsLoadingAuth(false)); 
+  }, []); 
 
   return (
     <AuthContext.Provider value={{ 
@@ -108,6 +138,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       loginWithDeriv,
       switchAccount,
+      handleOAuthCallback,
     }}>
       {children}
     </AuthContext.Provider>
