@@ -44,7 +44,7 @@ export default function OAuthCallback() {
       }
 
       if (accounts.length > 0) {
-        // Task 7 - Change 3: Build account object from acct1, cur1 only.
+        // Handle legacy/URL-params based redirect (Deriv's unique behavior)
         const account = {
           loginid: accounts[0].loginid,
           currency: accounts[0].currency,
@@ -52,16 +52,17 @@ export default function OAuthCallback() {
           balance: 0
         };
         localStorage.setItem('deriv_display_account', JSON.stringify(account));
+        localStorage.setItem('active_loginid', account.loginid);
         
-        // Cleanup
+        // Cleanup security state
         sessionStorage.removeItem('pkce_code_verifier');
         sessionStorage.removeItem('oauth_state');
 
         setStatus('success');
-        // Task 7 - Change 2: Use window.location.href = '/' NOT navigate('/')
+        // Force full page reload so AuthContext re-mounts and calls /api/me
         setTimeout(() => { window.location.href = '/'; }, 1500);
       } else if (code && codeVerifier) {
-        // 4. Token Exchange via Backend
+        // Secure Token Exchange via Backend
         try {
           const res = await fetch('/api/exchange-token', {
             method: 'POST',
@@ -76,20 +77,25 @@ export default function OAuthCallback() {
           const data = await res.json();
 
           if (res.ok) {
-            // Task 7 - Change 2: Success path
+            // Save display data if returned by backend
             if (data.account) { 
               localStorage.setItem('deriv_display_account', JSON.stringify(data.account)); 
+              localStorage.setItem('active_loginid', data.account.loginid);
             } 
+            
+            // Cleanup security state
             sessionStorage.removeItem('pkce_code_verifier'); 
             sessionStorage.removeItem('oauth_state'); 
+            
             setStatus('success'); 
+            // Force full page reload so AuthContext re-mounts and calls /api/me
             setTimeout(() => { window.location.href = '/'; }, 1500); 
           } else {
             setStatus('error');
             setErrorMessage(data.error || 'Failed to exchange authorization code for token.');
           }
         } catch (err) {
-          console.error('[auth] exchange error');
+          console.error('[auth] exchange error:', err);
           setStatus('error');
           setErrorMessage('An error occurred during secure token exchange.');
         }

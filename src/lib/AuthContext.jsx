@@ -104,14 +104,16 @@ export const AuthProvider = ({ children }) => {
   }, [accounts]);
 
   useEffect(() => { 
+    setIsLoadingAuth(true);
     fetch('/api/me') 
       .then(r => r.json()) 
       .then(data => { 
         if (data.authenticated) { 
           const saved = localStorage.getItem('deriv_display_account'); 
           const account = saved ? JSON.parse(saved) : null; 
-          setIsAuthenticated(true); 
+          
           if (account) { 
+            setIsAuthenticated(true); 
             setUser({ 
               name: account.fullname || 'Trader', 
               id: account.loginid, 
@@ -120,12 +122,20 @@ export const AuthProvider = ({ children }) => {
             }); 
             setActiveAccount(account); 
             setAccounts([account]); 
-          } 
-        } 
+          } else {
+            // No saved account data, logout to be safe
+            logout();
+          }
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
       }) 
-      .catch(() => {}) 
+      .catch(() => {
+        setIsAuthenticated(false);
+      }) 
       .finally(() => setIsLoadingAuth(false)); 
-  }, []); 
+  }, [logout]); 
 
   return (
     <AuthContext.Provider value={{ 
