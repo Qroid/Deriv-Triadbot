@@ -8,11 +8,10 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Layout from './components/layout';
 
 // Lazy load components
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Home = lazy(() => import('./pages/Home'));
 const Bots = lazy(() => import('./pages/Bots'));
 const TradeHistory = lazy(() => import('./pages/TradeHistory'));
 const Settings = lazy(() => import('./pages/Settings'));
-const MarketAnalysis = lazy(() => import('./pages/MarketAnalysis'));
 const BotBuilder = lazy(() => import('./pages/BotBuilder'));
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
 
@@ -38,10 +37,9 @@ const AuthenticatedApp = () => {
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Home />} />
           <Route path="/bots" element={<Bots />} />
           <Route path="/history" element={<TradeHistory />} />
-          <Route path="/market" element={<MarketAnalysis />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/builder" element={<BotBuilder />} />
           <Route path="/callback" element={<OAuthCallback />} />

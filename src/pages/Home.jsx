@@ -6,7 +6,7 @@ import { useDerivAccount } from "../hooks/useDerivAccount";
 import AssetAnalysisCard from "../components/market/AssetAnalysisCard";
 import {
   Activity, TrendingUp, TrendingDown, Minus, Zap,
-  ChevronDown, ChevronUp, FlaskConical
+  ChevronDown, ChevronUp
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "../lib/AuthContext";
 
-// ── Digits Markets ONLY (all Volatility Indices) ──────────────────────────────
 const ALL_ASSETS = [
   "Volatility 10 Index",
   "Volatility 25 Index",
@@ -38,7 +37,6 @@ const CATEGORIES = {
   "1-Second": ALL_ASSETS.filter(a => a.includes("(1s)")),
 };
 
-// Signal family colour map
 const FAMILY_STYLES = {
   "MATCHES_DIFFERS": "bg-amber-100 text-amber-700 border-amber-200",
   "OVER_UNDER":      "bg-teal-100 text-teal-700 border-teal-200",
@@ -46,9 +44,8 @@ const FAMILY_STYLES = {
   "RISE_FALL":       "bg-blue-100 text-blue-700 border-blue-200",
 };
 
-export default function MarketAnalysis() {
+export default function Home() {
   const { user } = useAuth();
-  // Use live balance from WebSocket hook — not stale user.balance
   const { balance: liveBalance, currency, isAuthorized } = useDerivAccount();
   const balance = isAuthorized ? liveBalance : parseFloat(user?.balance ?? 0);
 
@@ -104,7 +101,6 @@ export default function MarketAnalysis() {
     return { positive, negative, neutral, total };
   }, [marketData]);
 
-  // Count assets with live ticks
   const liveCount = ALL_ASSETS.filter(a => (marketData[a]?.ticks?.length ?? 0) > 0).length;
 
   const handleTrade = (asset, signal) => {
@@ -126,7 +122,6 @@ export default function MarketAnalysis() {
   return (
     <div className="p-4 md:p-6 space-y-6">
 
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -134,14 +129,13 @@ export default function MarketAnalysis() {
               <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Activity className="h-3.5 w-3.5 text-primary" />
               </div>
-              <h1 className="text-2xl font-black text-foreground">Market Scanner</h1>
+              <h1 className="text-2xl font-black text-foreground">Live Tick Stream</h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Deriv Digits Markets · Rise/Fall · Matches/Differs · Even/Odd · Over/Under
             </p>
           </div>
 
-          {/* Market Sentiment Summary */}
           <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-black/5 shadow-sm">
             <div className="text-center px-3 border-r border-black/5">
               <div className="flex items-center gap-1 text-success">
@@ -167,7 +161,6 @@ export default function MarketAnalysis() {
           </div>
         </div>
 
-        {/* Sentiment colour bar */}
         <div className="h-1.5 rounded-full overflow-hidden bg-secondary flex">
           <div className="bg-success transition-all duration-1000"
             style={{ width: `${(summaryStats.positive / summaryStats.total) * 100}%` }} />
@@ -177,7 +170,6 @@ export default function MarketAnalysis() {
             style={{ width: `${(summaryStats.negative / summaryStats.total) * 100}%` }} />
         </div>
 
-        {/* Market type legend */}
         <div className="flex flex-wrap gap-2">
           {Object.entries(FAMILY_STYLES).map(([family, style]) => (
             <span key={family}
@@ -188,7 +180,6 @@ export default function MarketAnalysis() {
         </div>
       </motion.div>
 
-      {/* Rapid Fire & Risk Configuration */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -212,7 +203,6 @@ export default function MarketAnalysis() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left: trade params */}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -249,7 +239,6 @@ export default function MarketAnalysis() {
             </div>
           </div>
 
-          {/* Right: risk limits + session */}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -272,7 +261,6 @@ export default function MarketAnalysis() {
               </div>
             </div>
 
-            {/* Session mini-stats */}
             <div className="grid grid-cols-3 gap-2 p-2 rounded-xl bg-black/[0.03] border border-black/5">
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Balance</span>
@@ -314,7 +302,6 @@ export default function MarketAnalysis() {
         </div>
       </motion.div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex gap-1 bg-black/[0.03] rounded-xl p-1 border border-black/[0.05]">
           {Object.keys(CATEGORIES).map((cat) => (
@@ -350,7 +337,6 @@ export default function MarketAnalysis() {
         </div>
       </div>
 
-      {/* Asset Grid */}
       {filteredAssets.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Zap className="h-8 w-8 mx-auto mb-3 opacity-30" />
@@ -370,7 +356,6 @@ export default function MarketAnalysis() {
         </div>
       )}
 
-      {/* Strategy Performance */}
       <div className="mt-8">
         <Collapsible open={isPerfOpen} onOpenChange={setIsPerfOpen} className="space-y-2">
           <div className="flex items-center justify-between p-4 rounded-2xl bg-white border border-black/5 shadow-sm">

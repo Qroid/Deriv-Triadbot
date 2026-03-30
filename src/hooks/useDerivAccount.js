@@ -2,11 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { APP_CONFIG } from '../lib/config';
 
-/**
- * Retrieves the best available Deriv token:
- * 1. From /api/get-ws-token (Vercel production — reads HttpOnly cookie)
- * 2. Falls back to localStorage directly (local dev / legacy path)
- */
 async function getBestToken(isVirtual) {
   try {
     const res = await fetch('/api/get-ws-token');
@@ -16,7 +11,6 @@ async function getBestToken(isVirtual) {
     }
   } catch {}
 
-  // Fallback: read directly from localStorage (works in local dev)
   const key = isVirtual ? 'deriv_demo_token' : 'deriv_real_token';
   const specificToken = localStorage.getItem(key);
   if (specificToken) return specificToken;
@@ -32,19 +26,20 @@ export const useDerivAccount = () => {
   const [error, setError] = useState(null);
   const socketRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const isVirtualRef = useRef(true);
+  const isConnectedRef = useRef(false);
 
   const connect = useCallback(async () => {
-    // Clear any existing connection
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
     }
 
-    const isVirtual = user?.is_virtual !== 0; // default to demo
-    const token = await getBestToken(isVirtual);
+    const token = await getBestToken(isVirtualRef.current);
 
     if (!token) {
       setIsAuthorized(false);
+      isConnectedRef.current = false;
       return;
     }
 
@@ -65,19 +60,19 @@ export const useDerivAccount = () => {
         }
         setError(data.error.message);
         setIsAuthorized(false);
+        isConnectedRef.current = false;
         return;
       }
 
       if (data.msg_type === 'authorize') {
         setIsAuthorized(true);
+        isConnectedRef.current = true;
         setError(null);
         const liveBalance = data.authorize.balance;
         const liveCurrency = data.authorize.currency;
         setBalance(liveBalance);
         setCurrency(liveCurrency);
-        // Push live balance back into AuthContext so ALL pages see it
         updateBalance(liveBalance, liveCurrency);
-        // Subscribe to real-time balance updates
         ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
       }
 
@@ -91,8 +86,9 @@ export const useDerivAccount = () => {
     };
 
     ws.onclose = () => {
+      isConnectedRef.current = false;
+      if (socketRef.current?.readyState === WebSocket.OPEN) return;
       setIsAuthorized(false);
-      // Auto-reconnect after 5s if still authenticated
       if (isAuthenticated) {
         reconnectTimer.current = setTimeout(() => connect(), 5000);
       }
@@ -102,30 +98,42 @@ export const useDerivAccount = () => {
       console.error('[useDerivAccount] ws error:', err);
       setError('Connection failed');
     };
-  }, [logout, updateBalance, isAuthenticated, user?.is_virtual]);
+  }, [logout, updateBalance, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.is_virtual !== undefined) {
+      isVirtualRef.current = user.is_virtual !== 0;
+    }
+  }, [user?.is_virtual, isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated) {
       connect();
     } else {
-      if (socketRef.current) socketRef.current.close();
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       setIsAuthorized(false);
+      isConnectedRef.current = false;
       setBalance(0);
     }
 
     return () => {
-      if (socketRef.current) socketRef.current.close();
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
   }, [isAuthenticated, connect]);
 
-  // Re-connect when user switches between demo/real accounts
   useEffect(() => {
-    if (isAuthenticated && user?.loginid) {
+    if (isAuthenticated && user?.loginid && !isConnectedRef.current) {
       connect();
     }
-  }, [user?.loginid]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.loginid]);
 
   return {
     balance,

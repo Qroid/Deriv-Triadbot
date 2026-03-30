@@ -1,14 +1,27 @@
+const ALLOWED_ORIGINS = [
+  'https://triadbot.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+const ALLOWED_REDIRECT_URIS = [
+  'https://triadbot.vercel.app/callback',
+  'http://localhost:5173/callback',
+  'http://localhost:3000/callback',
+];
+
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', 'https://triadbot.vercel.app');
+  // CORS headers - allow both dev and production
+  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGINS.includes(req.headers['origin']) ? req.headers['origin'] : ALLOWED_ORIGINS[0]);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   // Origin guard
   const origin = req.headers['origin'];
-  if (origin !== 'https://triadbot.vercel.app') {
+  if (!ALLOWED_ORIGINS.includes(origin)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
@@ -16,8 +29,9 @@ export default async function handler(req, res) {
 
   // ── Legacy / Hybrid path: token supplied directly in the URL ──────────────
   if (token && typeof token === 'string' && token.length > 0) {
+    const isSecure = origin.startsWith('https://');
     res.setHeader('Set-Cookie',
-      `deriv_token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=3600`
+      `deriv_token=${token}; ${isSecure ? 'Secure;' : ''} SameSite=Strict; Path=/; Max-Age=3600`
     );
     // For the legacy path, resolve account info via WebSocket immediately
     const accountInfo = await resolveAccountViaWS(token);
@@ -29,7 +43,7 @@ export default async function handler(req, res) {
     !code || typeof code !== 'string' || code.length > 512 ||
     !codeVerifier || typeof codeVerifier !== 'string' ||
     codeVerifier.length < 43 || codeVerifier.length > 256 ||
-    redirectUri !== 'https://triadbot.vercel.app/callback'
+    !ALLOWED_REDIRECT_URIS.includes(redirectUri)
   ) {
     return res.status(400).json({ error: 'Invalid request parameters' });
   }
@@ -62,8 +76,9 @@ export default async function handler(req, res) {
     const accountInfo = await resolveAccountViaWS(access_token);
 
     // Set HttpOnly-style cookie with the token
+    const isSecure = origin.startsWith('https://');
     res.setHeader('Set-Cookie',
-      `deriv_token=${access_token}; Secure; SameSite=Strict; Path=/; Max-Age=3600`
+      `deriv_token=${access_token}; ${isSecure ? 'Secure;' : ''} SameSite=Strict; Path=/; Max-Age=3600`
     );
 
     return res.status(200).json({ success: true, ...accountInfo });

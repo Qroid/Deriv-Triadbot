@@ -2,19 +2,17 @@ import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  LayoutDashboard, 
+  Home, 
   Bot, 
   Blocks, 
-  LineChart, 
   History, 
   Settings 
 } from "lucide-react";
 
 const navItems = [
-  { path: "/", label: "Home", icon: LayoutDashboard },
+  { path: "/", label: "Home", icon: Home },
   { path: "/bots", label: "Bots", icon: Bot },
   { path: "/builder", label: "Builder", icon: Blocks },
-  { path: "/market", label: "Scanner", icon: LineChart },
   { path: "/history", label: "History", icon: History },
   { path: "/settings", label: "Settings", icon: Settings },
 ];

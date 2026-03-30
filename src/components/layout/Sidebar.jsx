@@ -1,14 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Bot, History, LineChart, Settings, Activity, Blocks } from "lucide-react";
+import { Home, Bot, History, Settings, Activity, Blocks } from "lucide-react";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard, desc: "Overview & P&L" },
+  { path: "/", label: "Home", icon: Home, desc: "Live tick stream" },
   { path: "/bots", label: "My Bots", icon: Bot, desc: "Manage strategies" },
   { path: "/builder", label: "Bot Builder", icon: Blocks, desc: "Visual bot editor" },
-  { path: "/market", label: "Market Scanner", icon: LineChart, desc: "Digit & tick signals" },
   { path: "/history", label: "Trade History", icon: History, desc: "Execution log" },
-  { path: "/settings", label: "Settings", icon: Settings, desc: "API & preferences" },
+  { path: "/settings", label: "Settings", icon: Settings, desc: "Account & preferences" },
 ];
 
 export default function Sidebar() {

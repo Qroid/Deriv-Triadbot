@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({
           code,
           codeVerifier,
-          redirectUri: 'https://triadbot.vercel.app/callback',
+          redirectUri: APP_CONFIG.REDIRECT_URL,
         }),
       });
       const data = await res.json();
