@@ -1,41 +1,41 @@
 export default async function handler(req, res) {
-  // Step 1 — Set CORS headers
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', 'https://triadbot.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  // Step 2 — Method check
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Step 3 — Origin check
+  // Origin guard
   const origin = req.headers['origin'];
   if (origin !== 'https://triadbot.vercel.app') {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  // Step 4 — Destructure and validate inputs
   const { code, codeVerifier, redirectUri, token } = req.body;
 
-  // Handle direct token set (Legacy/Hybrid path)
+  // ── Legacy / Hybrid path: token supplied directly in the URL ──────────────
   if (token && typeof token === 'string' && token.length > 0) {
     res.setHeader('Set-Cookie',
       `deriv_token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=3600`
     );
-    return res.status(200).json({ success: true });
+    // For the legacy path, resolve account info via WebSocket immediately
+    const accountInfo = await resolveAccountViaWS(token);
+    return res.status(200).json({ success: true, ...accountInfo });
   }
 
-  // Standard Code Flow
+  // ── Standard OAuth2 Code Flow ─────────────────────────────────────────────
   if (
     !code || typeof code !== 'string' || code.length > 512 ||
-    !codeVerifier || typeof codeVerifier !== 'string' || codeVerifier.length < 43 || codeVerifier.length > 256 ||
+    !codeVerifier || typeof codeVerifier !== 'string' ||
+    codeVerifier.length < 43 || codeVerifier.length > 256 ||
     redirectUri !== 'https://triadbot.vercel.app/callback'
   ) {
     return res.status(400).json({ error: 'Invalid request parameters' });
   }
 
   try {
-    // Step 5 — Exchange code for token
+    // Exchange authorization code for access token
     const tokenParams = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: process.env.DERIV_CLIENT_ID || '32PgOi26JPTXu7dxCbWOI',
@@ -51,50 +51,90 @@ export default async function handler(req, res) {
     });
 
     const tokenData = await tokenRes.json();
-
     if (!tokenRes.ok) {
-      console.error('[exchange-token] Deriv error:', tokenData);
+      console.error('[exchange-token] Deriv token exchange error:', tokenData);
       return res.status(400).json({ error: 'Authentication failed' });
     }
 
     const { access_token } = tokenData;
 
-    // Step 6 — Fetch account info
-    let account = null;
-    try {
-      const accountRes = await fetch('https://api.derivws.com/trading/v1/options/accounts', {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      
-      console.log('[exchange-token] account response status:', accountRes.status);
-      const accountsData = await accountRes.json();
-      console.log('[exchange-token] account data:', JSON.stringify(accountsData));
+    // Resolve full account info via WebSocket authorize (the correct Deriv method)
+    const accountInfo = await resolveAccountViaWS(access_token);
 
-      if (accountRes.ok && Array.isArray(accountsData) && accountsData.length > 0) {
-        const acc = accountsData[0];
-        account = { 
-          loginid: acc.loginid ?? acc.id ?? acc.account_id, 
-          fullname: acc.name ?? acc.full_name ?? acc.fullname ?? 'Trader', 
-          currency: acc.currency ?? 'USD', 
-          balance: acc.balance ?? acc.available_balance ?? 0, 
-        };
-      }
-    } catch (err) {
-      console.error('[exchange-token] Account fetch failed:', err);
-    }
-
-    // Step 7 — Set cookie (REMOVED HttpOnly to allow frontend hooks to authorized WebSockets)
+    // Set HttpOnly-style cookie with the token
     res.setHeader('Set-Cookie',
       `deriv_token=${access_token}; Secure; SameSite=Strict; Path=/; Max-Age=3600`
     );
 
-    // Step 8 — Return safe response only
-    return res.status(200).json({
-      success: true,
-      account: account ? { loginid, fullname, currency, balance } : null
-    });
+    return res.status(200).json({ success: true, ...accountInfo });
+
   } catch (error) {
     console.error('[exchange-token] Internal error:', error);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+/**
+ * Resolves account info and all sub-accounts via Deriv WebSocket authorize.
+ * Returns { account, accounts } — account is the primary, accounts is the full list.
+ */
+async function resolveAccountViaWS(accessToken) {
+  try {
+    const WebSocket = (await import('ws')).default;
+    return await new Promise((resolve) => {
+      const appId = process.env.DERIV_CLIENT_ID || '32PgOi26JPTXu7dxCbWOI';
+      const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
+      const timer = setTimeout(() => {
+        ws.close();
+        resolve({ account: null, accounts: [] });
+      }, 8000);
+
+      ws.on('open', () => {
+        ws.send(JSON.stringify({ authorize: accessToken }));
+      });
+
+      ws.on('message', (raw) => {
+        clearTimeout(timer);
+        try {
+          const msg = JSON.parse(raw.toString());
+          if (msg.msg_type === 'authorize' && !msg.error) {
+            const auth = msg.authorize;
+
+            const account = {
+              loginid: auth.loginid,
+              fullname: auth.fullname || 'Trader',
+              currency: auth.currency,
+              balance: auth.balance,
+              is_virtual: auth.is_virtual ? 1 : 0,
+            };
+
+            // account_list contains all sub-accounts (demo VRTC + real CR/MLT)
+            const accounts = Array.isArray(auth.account_list)
+              ? auth.account_list.map(a => ({
+                  loginid: a.loginid,
+                  currency: a.currency || auth.currency,
+                  is_virtual: a.is_virtual ? 1 : 0,
+                  token: accessToken,
+                  fullname: auth.fullname || 'Trader',
+                  balance: a.loginid === auth.loginid ? auth.balance : 0,
+                }))
+              : [account];
+
+            ws.close();
+            resolve({ account, accounts });
+            return;
+          }
+        } catch {}
+        ws.close();
+        resolve({ account: null, accounts: [] });
+      });
+
+      ws.on('error', () => {
+        clearTimeout(timer);
+        resolve({ account: null, accounts: [] });
+      });
+    });
+  } catch {
+    return { account: null, accounts: [] };
   }
 }
